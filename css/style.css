@@ -16,7 +16,7 @@
   --accent-hover:  #0f4a63;
   --accent-soft:   #e7f1f6;
   --gold:          #a8762a;
-  --gold-bright:   #edb93f;   /* the rule over banner photographs */
+  --gold-bright:   #ffc94a;   /* the rule over banner photographs */
   --shadow-sm:     0 1px 2px rgba(16, 32, 43, .06), 0 1px 3px rgba(16, 32, 43, .04);
   --shadow-md:     0 2px 4px rgba(16, 32, 43, .05), 0 8px 24px rgba(16, 32, 43, .07);
 
@@ -92,11 +92,11 @@ ul { padding-left: 1.15em; }
 /* Keeps prose to a comfortable measure while staying flush with the grid. */
 .wrap-narrow > * { max-width: var(--max-txt); }
 
-section { padding-block: clamp(2.5rem, 1.5rem + 3vw, 4.25rem); }
+section { padding-block: clamp(1.75rem, 1.15rem + 2vw, 2.75rem); }
 section + section { border-top: 1px solid var(--line); }
 section.tint { background: var(--surface); }
 
-.section-head { margin-bottom: 1.75rem; }
+.section-head { margin-bottom: 1.25rem; }
 .section-head p { color: var(--muted); margin: 0; max-width: 62ch; }
 .eyebrow {
   display: block;
@@ -193,10 +193,27 @@ section.tint { background: var(--surface); }
 /* --- inner pages ---------------------------------------------------------- */
 
 .pagebanner {
-  display: flex; flex-direction: column; justify-content: flex-end;
-  min-height: clamp(210px, 9rem + 16vw, 380px);
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: clamp(200px, 8.65rem + 13.3vw, 332px);
 }
 .pagebanner > .wrap { width: 100%; }
+
+/* With scripting on, the banner is pinned under the header and shrinks as
+   the page scrolls (see js/main.js). Without it, everything below is inert
+   and the banner behaves exactly as it always has. */
+.has-shrink-banner .pagebanner {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 40;
+  min-height: 0;
+}
+.has-shrink-banner .pagebanner > .wrap { overflow: hidden; }
+/* A white veil over the photograph, lit up as the banner collapses. It sits
+   above the picture and its scrim but below the title, so only the image
+   brightens. */
+.has-shrink-banner .pagebanner::before {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  background: #fff; opacity: var(--veil, 0); pointer-events: none;
+}
+.has-shrink-banner .pagebanner > .wrap { position: relative; z-index: 2; }
 .pagebanner::after {
   content: ""; position: absolute; inset: 0;
   /* Deliberately light: the photograph is the point. The scrim only builds
@@ -204,38 +221,40 @@ section.tint { background: var(--surface); }
      shadow so it stays readable without drowning the picture. */
   background:
     linear-gradient(to bottom,
-              rgba(10, 22, 30, 0) 0%,
-              rgba(10, 22, 30, .06) 38%,
-              rgba(10, 22, 30, .30) 68%,
-              rgba(10, 22, 30, .62) 100%),
+              rgba(10, 22, 30, .10) 0%,
+              rgba(10, 22, 30, .34) 50%,
+              rgba(10, 22, 30, .10) 100%),
     linear-gradient(to right,
               rgba(10, 22, 30, .22) 0%,
               rgba(10, 22, 30, .10) 40%,
               rgba(10, 22, 30, 0) 70%);
 }
-.pagebanner .wrap { padding-block: clamp(1.5rem, 1rem + 2vw, 2.5rem); }
+.pagebanner .wrap { padding-block: clamp(1rem, .75rem + 1.2vw, 1.6rem); text-align: center; }
+/* The gold rule is drawn by the title itself, so it is exactly as wide as
+   the text above it. */
 .pagebanner h1, .pagebanner .banner-title {
-  color: #fff; margin: 0;
-  font-weight: 650; line-height: 1.2;
-  font-size: clamp(1.9rem, 1.5rem + 1.8vw, 2.7rem);
+  color: #fff; margin: 0; display: inline-block;
+  font-weight: 650; line-height: 1.15;
+  font-size: clamp(3rem, 2.2rem + 3.4vw, 4.7rem);
   letter-spacing: -0.02em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .75), 0 3px 22px rgba(0, 0, 0, .7);
 }
-.pagebanner p {
-  margin: .6rem 0 0; max-width: 60ch;
-  color: rgba(255, 255, 255, .95); font-size: .98rem;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .85), 0 2px 14px rgba(0, 0, 0, .8);
+.pagebanner h1::after, .pagebanner .banner-title::after {
+  content: ""; display: block;
+  height: 6px; border-radius: 3px; margin-top: .55rem;
+  background: var(--gold-bright);
 }
 .banner-rule {
-  width: 72px; height: 4px; border-radius: 2px;
+  width: 72px; height: 4px; border-radius: 3px;
   background: var(--gold-bright);
   margin-bottom: 1rem;
 }
 
+
 /* --- home: the banner behaves exactly like every other page's, and the
        introduction sits below it on white, the way the previous site did -- */
 
-.intro-section { padding-block: clamp(2.25rem, 1.5rem + 3vw, 3.5rem); }
+.intro-section { padding-block: clamp(1.75rem, 1.25rem + 2vw, 2.75rem); }
 .intro {
   display: grid; grid-template-columns: auto minmax(0, 1fr);
   gap: clamp(1.5rem, 1rem + 3vw, 3rem); align-items: start;
@@ -296,6 +315,27 @@ a.chip:hover { border-color: var(--accent); color: var(--accent); background: va
   box-shadow: var(--shadow-sm);
 }
 section.tint .card { background: var(--bg); }
+
+/* Funder marks on the grant cards: heights are set per logo shape so the
+   square EPSRC lockup and the wide Leverhulme wordmark read at the same
+   visual weight. */
+.grant-logo { display: block; height: 64px; width: auto; margin-bottom: 1rem; }
+.grant-logo-wide { height: 46px; margin-top: .5rem; }
+
+/* Awarding institution on an education card. */
+.edu-logo { display: block; height: 40px; width: auto; margin-bottom: .85rem; }
+
+/* The mark that opens each area-of-interest card, in place of a number. */
+.card-icon { display: block; width: 52px; height: 52px; margin-bottom: .9rem; }
+
+/* The Queen Mary lockup sits beside the title line, dropping below it on
+   narrow screens rather than squeezing the text. */
+.name-row {
+  display: flex; align-items: center; gap: 2rem;
+  flex-wrap: wrap; margin-bottom: 1rem;
+}
+.name-row .intro-title { margin-bottom: 0; }
+.name-logo { height: 36px; width: auto; }
 .card h3 { margin-bottom: .6rem; }
 .card p:last-child, .card ul:last-child { margin-bottom: 0; }
 .card ul { margin: 0; color: var(--ink-soft); }

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Probability and stochastic processes">
+  <!-- A sample path of a random walk over its axes. -->
+  <path d="M8 5v37h35" fill="none" stroke="#16607e" stroke-width="1.8"
+        opacity=".4" stroke-linecap="round"/>
+  <path d="M10 34l6-8 5 6 6-13 5 8 6-14 5 8" fill="none" stroke="#16607e"
+        stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#16607e">
+    <circle cx="16" cy="26" r="2.4"/><circle cx="27" cy="19" r="2.4"/>
+    <circle cx="38" cy="13" r="2.4"/>
+  </g>
+</svg>

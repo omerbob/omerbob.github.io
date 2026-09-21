@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Applied topology">
+  <!-- A persistence barcode: the long bars are signal, the short ones noise. -->
+  <g stroke="#16607e" stroke-width="4.4" stroke-linecap="round">
+    <path d="M7 10h34"/>
+    <path d="M7 20h23"/>
+    <path d="M7 30h13" opacity=".7"/>
+    <path d="M7 39h6" opacity=".45"/>
+  </g>
+</svg>
