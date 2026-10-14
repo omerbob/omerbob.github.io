@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulations · Omer Bobrowski</title>
+<meta name="description" content="Interactive simulations in stochastic topology and topological data analysis, by Omer Bobrowski.">
+<link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">Omer Bobrowski <span>· <bdi>עומר בוברובסקי</bdi></span></a>
+    <button class="nav-toggle" aria-expanded="false" aria-controls="nav" aria-label="Menu">☰</button>
+    <nav class="nav" id="nav">
+      <a href="index.html">Home</a>
+      <a href="publications.html">Publications</a>
+      <a href="group.html">Group</a>
+      <a href="talks.html">Talks</a>
+      <a href="teaching.html">Teaching</a>
+      <a href="simulations.html" aria-current="page">Simulations</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<div class="banner-base pagebanner" style="background-image:url('images/banner-sculpture.jpg')">
+  <div class="wrap">
+    <h1>Simulations</h1>
+  </div>
+</div>
+
+<main id="main">
+  <section>
+    <div class="wrap">
+
+      <!-- To add a simulation: copy one <article class="sim"> block, point both
+           links at the new file in simulations/, and edit the text. -->
+      <div class="sim-list">
+
+        <article class="sim">
+          <div class="sim-body">
+            <h2><a href="simulations/persistence-explorer.html">Persistence Explorer</a></h2>
+            <p>Grow a ball of radius r around every point and watch the topology change:
+            components merge, loops appear and fill in, and every feature leaves a bar
+            recording its lifetime. Rips and alpha complexes, barcodes and persistence
+            diagrams, and a representative cycle highlighted in the cloud when you click
+            a bar.</p>
+            <ul class="chips">
+              <li class="chip">H&#8320; and H&#8321;</li>
+              <li class="chip">Rips and alpha complexes</li>
+              <li class="chip">Cluster persistence</li>
+            </ul>
+          </div>
+          <div class="sim-go">
+            <a class="sim-open" href="simulations/persistence-explorer.html">Open</a>
+          </div>
+        </article>
+
+      </div>
+
+    </div>
+  </section>
+</main>
+
+
+<script src="js/main.js"></script>
+</body>
+</html>

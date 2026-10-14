@@ -547,3 +547,32 @@ section.tint .card { background: var(--bg); }
   body { font-size: 11pt; color: #000; background: #fff; }
   .pub { break-inside: avoid; }
 }
+
+/* --------------------------------------------------- simulations ---------- */
+
+.sim-list { display: flex; flex-direction: column; gap: 1.25rem; }
+.sim {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem; align-items: center;
+  padding: 1.6rem;
+  border: 1px solid var(--line); border-top: 3px solid var(--accent);
+  border-radius: var(--radius); background: var(--bg);
+  box-shadow: var(--shadow-sm);
+}
+.sim h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+.sim h2 a { color: var(--ink); }
+.sim h2 a:hover { color: var(--accent); text-decoration: none; }
+.sim p { color: var(--ink-soft); max-width: 66ch; margin-bottom: 1rem; }
+.sim .chips .chip { font-size: .8rem; padding: .25rem .65rem; cursor: default; }
+
+.sim-open {
+  display: inline-block; white-space: nowrap;
+  padding: .65rem 1.5rem; border-radius: 999px;
+  background: var(--accent); color: #fff; font-weight: 600;
+}
+.sim-open:hover { background: var(--accent-hover); color: #fff; text-decoration: none; }
+
+@media (max-width: 640px) {
+  .sim { grid-template-columns: 1fr; gap: 1.25rem; }
+  .sim-go { justify-self: start; }
+}

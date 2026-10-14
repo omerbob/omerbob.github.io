@@ -243,6 +243,7 @@ HEAD = """<!DOCTYPE html>
       <a href="teaching.html">Teaching</a>
       <a href="talks.html">Talks</a>
       <a href="group.html">Group</a>
+      <a href="simulations.html">Simulations</a>
       <a href="contact.html">Contact</a>
     </nav>
   </div>
