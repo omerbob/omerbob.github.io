@@ -1,0 +1,1753 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Point Process Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control bar → row of three sample plots → functional bar → row of three ECDF plots. */
+:root {
+  --bg: #F2F4F7;
+  --panel: #FFFFFF;
+  --soft: #EBEEF3;
+  --line: #DFE3EA;
+  --fg: #141821;
+  --muted: #687082;
+  --faint: #A3AAB8;
+  --s1: #3667DB;
+  --s2: #D9532F;
+  --s3: #0E9A7B;
+  --shadow: 0 1px 2px rgba(20,24,33,.04), 0 4px 16px rgba(20,24,33,.05);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1015; --panel: #151920; --soft: #1C212A; --line: #262C37;
+    --fg: #E8EBF1; --muted: #8C94A4; --faint: #59606E;
+    --s1: #6F9BF7; --s2: #F2805F; --s3: #3CC9A5;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1015; --panel: #151920; --soft: #1C212A; --line: #262C37;
+  --fg: #E8EBF1; --muted: #8C94A4; --faint: #59606E;
+  --s1: #6F9BF7; --s2: #F2805F; --s3: #3CC9A5;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+.app { max-width: 1440px; margin: 0 auto; gap: 14px !important; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 28px; display: grid; gap: 16px; }
+@media (min-width: 700px) { .app { padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); } }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.hl { display: grid; gap: 4px; min-width: 0; }
+.hc { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.hc input[type=number] { background: var(--panel); box-shadow: 0 0 0 1px var(--line); }
+.hc .btn { background: var(--panel); box-shadow: 0 0 0 1px var(--line); height: 33px; }
+.hc .btn:hover { background: var(--soft); }
+h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.015em; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 70ch; }
+
+.bar { display: flex; padding-block: 10px !important; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); }
+.grp { display: grid; gap: 6px; min-width: 0; }
+.lbl { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+.lbl output { font-family: var(--mono); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--fg); }
+.lbl .nt { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.seg { display: inline-flex; background: var(--soft); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font: 500 13px/1 var(--font); padding: 7px 12px; border-radius: 7px; cursor: pointer; transition: background .15s, color .15s; white-space: nowrap; }
+.seg button:hover:not(:disabled) { color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
+.seg button:disabled { opacity: .38; cursor: not-allowed; }
+select { appearance: none; font: 500 13px/1 var(--font); color: var(--fg); background: var(--soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23889' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center; border: 0; border-radius: 9px; padding: 9px 30px 9px 12px; cursor: pointer; min-width: 200px; max-width: 100%; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 130px; height: 22px; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: var(--soft); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--soft); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--panel); border: 2px solid var(--fg); margin-top: -6px; }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--fg); }
+input[type=number] { font: 500 13px/1 var(--mono); color: var(--fg); background: var(--soft); border: 0; border-radius: 9px; padding: 9px 10px; width: 84px; }
+.btn { appearance: none; border: 0; background: var(--soft); color: var(--fg); height: 32px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; gap: 6px; font: 500 13px/1 var(--font); cursor: pointer; transition: background .15s; }
+.btn:hover { background: var(--line); }
+.row { display: flex; gap: 8px; align-items: center; }
+.spacer { flex: 1; }
+:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .trio { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); min-width: 0; padding-bottom: 12px; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; padding: 10px 16px 0; flex-wrap: wrap; }
+.ttl { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.meta { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#cdfs .card-head { flex-wrap: nowrap; }
+#cdfs .ttl { flex: none; white-space: nowrap; }
+.cv { position: relative; margin: 10px 16px 0; border-radius: 10px; overflow: hidden; max-width: 100%; }
+.cv canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cv.pts { aspect-ratio: 1 / 1; background: var(--bg); touch-action: none; }
+.cv.pts.rot { cursor: grab; }
+.cv.pts.rot:active { cursor: grabbing; }
+.cv.cdf { aspect-ratio: 5 / 4; }
+.badge { position: absolute; left: 10px; bottom: 10px; font-size: 11.5px; color: var(--muted); background: color-mix(in srgb, var(--panel) 82%, transparent); padding: 4px 8px; border-radius: 6px; pointer-events: none; }
+.busy { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 65%, transparent); font-weight: 500; color: var(--muted); }
+
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; padding: 10px 16px 0; }
+.ctl select { flex: 1 1 160px; min-width: 0; }
+.ctl input[type=range] { width: 120px; }
+.ctl.params { min-height: 38px; padding-top: 8px; align-items: center; gap: 6px 18px; }
+.ctl.params .grp { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; }
+.ctl.params .lbl { gap: 6px; }
+.ctl.params input[type=range] { width: 80px; }
+.ctl.params .num { width: 64px; }
+input[type=number].num { width: 64px; padding: 6px 8px; font-size: 12.5px; }
+.noparam { font-size: 12px; color: var(--faint); }
+
+.btn.ov { height: 34px; padding: 0 14px; align-self: flex-end; }
+.btn.ov[aria-pressed="true"] { background: var(--fg); color: var(--panel); }
+#cdfs { position: relative; }
+#cdfs .card { position: relative; transition: transform .72s cubic-bezier(.65,0,.25,1), background-color .35s, border-color .35s, box-shadow .35s; }
+#cdfs .card .card-head { transition: opacity .3s; }
+#cdfs .card.fly { transform: translate(var(--dx), var(--dy)); background-color: transparent; border-color: transparent; box-shadow: none; z-index: 2; pointer-events: none; }
+#cdfs .card.fly .card-head { opacity: 0; }
+#cdfs .card.gone { visibility: hidden; }
+@media (max-width: 860px) { #cdfs .card.gone { display: none; } }
+#cdfs.instant .card, #cdfs .card.instant1 { transition: none !important; }
+.legend { display: none; flex: 1 1 auto; min-width: 0; gap: 14px; align-items: center; font-size: 12px; color: var(--muted); opacity: 0; transition: opacity .3s; }
+#cdfs.overlay .legend { display: flex; }
+#cdfs.show-legend .legend { opacity: 1; }
+#cdfs.overlay #ct1, #cdfs.overlay #cm1 { display: none; }
+.legend .li { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 0 1 auto; white-space: nowrap; }
+.legend .li .ln { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.legend .li b { color: var(--fg); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { #cdfs .card, .legend { transition: none !important; } }
+
+@media (min-width: 861px) { .fitted .cv.pts, .fitted .cv.cdf { aspect-ratio: auto; height: var(--ph); } }
+.chk { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 9px; background: var(--soft); font: 500 13px/1 var(--font); color: var(--fg); cursor: pointer; align-self: flex-end; user-select: none; }
+.chk input { accent-color: var(--fg); width: 15px; height: 15px; margin: 0; cursor: inherit; }
+.chk.off { opacity: .4; cursor: not-allowed; }
+.note { color: var(--muted); font-size: 12.5px; max-width: 110ch; display: grid; gap: 4px; }
+.note p { margin: 0; }
+.note b { color: var(--fg); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="hl">
+      <h1>Point Process Lab</h1>
+      <p class="lede">Pick a point process for each of three samples, then compare the empirical distribution of a functional computed on each.</p>
+    </div>
+    <div class="hc">
+      <div class="grp">
+        <label class="lbl" for="nIn">Points</label>
+        <input type="number" id="nIn" min="10" max="100000" step="100" value="2500" inputmode="numeric">
+      </div>
+      <div class="grp">
+        <label class="lbl" for="seedIn">Seed</label>
+        <input type="number" id="seedIn" min="0" max="999999" step="1" value="1" inputmode="numeric">
+      </div>
+      <button type="button" class="btn" id="reseed" title="Draw three new samples"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5v3h-3"/></svg>New samples</button>
+    </div>
+  </header>
+
+  <section class="trio" id="samples" aria-label="Samples"></section>
+
+  <section class="bar" aria-label="Functional">
+    <div class="grp">
+      <label class="lbl" for="fnSel">Functional</label>
+      <select id="fnSel">
+        <option value="h1">H₁ persistence · death / birth</option>
+        <option value="cluster">Cluster persistence · death / birth</option>
+        <option value="knn">k-NN graph · vertex degree</option>
+        <option value="ratio">NN distances · Rᵢ / Rⱼ</option>
+      </select>
+    </div>
+    <div class="grp fparam" data-for="cluster" hidden>
+      <label class="lbl" for="kcN"><span>Cluster size <span class="nt">k</span></span></label>
+      <div class="row"><input type="range" id="kc" min="2" max="40" step="1" value="3" aria-label="kc"><input type="number" class="num" id="kcN" min="2" step="1" value="3"></div>
+    </div>
+    <div class="grp fparam" data-for="knn" hidden>
+      <label class="lbl" for="kkN"><span>Neighbours <span class="nt">k</span></span></label>
+      <div class="row"><input type="range" id="kk" min="1" max="20" step="1" value="3" aria-label="kk"><input type="number" class="num" id="kkN" min="1" step="1" value="3"></div>
+    </div>
+    <div class="grp fparam" data-for="knn" hidden>
+      <div class="lbl">Edges</div>
+      <div class="seg" id="segGraph">
+        <button type="button" data-v="sym" aria-pressed="true" title="Edge if either point is among the other's k nearest">Either</button>
+        <button type="button" data-v="mut" aria-pressed="false" title="Edge if both points are among each other's k nearest">Mutual</button>
+        <button type="button" data-v="in" aria-pressed="false" title="Number of points that have this point among their k nearest">In-degree</button>
+      </div>
+    </div>
+    <div class="grp fparam" data-for="ratio" hidden>
+      <label class="lbl" for="riN"><span>Numerator <span class="nt">i</span></span></label>
+      <div class="row"><input type="range" id="ri" min="1" max="20" step="1" value="2" aria-label="ri"><input type="number" class="num" id="riN" min="1" step="1" value="2"></div>
+    </div>
+    <div class="grp fparam" data-for="ratio" hidden>
+      <label class="lbl" for="rjN"><span>Denominator <span class="nt">j</span></span></label>
+      <div class="row"><input type="range" id="rj" min="1" max="20" step="1" value="1" aria-label="rj"><input type="number" class="num" id="rjN" min="1" step="1" value="1"></div>
+    </div>
+    <div class="spacer"></div>
+    <button type="button" class="btn ov" id="ovBtn" aria-pressed="false">
+      <svg id="icoOverlay" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="4" width="3.5" height="8" rx="1"/><rect x="6.25" y="4" width="3.5" height="8" rx="1"/><rect x="11" y="4" width="3.5" height="8" rx="1"/><path d="M3.2 2.2 6 3M12.8 2.2 10 3"/></svg>
+      <svg id="icoSplit" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" hidden><rect x="5" y="3" width="6" height="10" rx="1.2"/><path d="M3.5 8H1M1 8l1.6-1.6M1 8l1.6 1.6M12.5 8H15M15 8l-1.6-1.6M15 8l-1.6 1.6"/></svg>
+      <span>Overlay</span>
+    </button>
+    <div class="grp">
+      <div class="lbl">Show</div>
+      <div class="seg" id="segKind">
+        <button type="button" data-v="cdf" aria-pressed="true">CDF</button>
+        <button type="button" data-v="pdf" aria-pressed="false">PDF</button>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="lbl">X-axis</div>
+      <div class="seg" id="segScale">
+        <button type="button" data-v="lin" aria-pressed="false">Linear</button>
+        <button type="button" data-v="log" aria-pressed="false">Log</button>
+        <button type="button" data-v="loglog" aria-pressed="true">Log-log</button>
+      </div>
+    </div>
+    <label class="chk" id="normWrap"><input type="checkbox" id="normIn"><span>Normalize</span></label>
+  </section>
+
+  <section class="trio" id="cdfs" aria-label="Empirical CDFs"></section>
+
+  <footer class="note">
+    <p id="fnNote"></p>
+    <p>Points can go up to 100,000; large 3D samples can take a while for the persistence functionals, and each sample computes in the background. Homology is computed only up to radius 5 × the largest nearest-neighbour distance in the sample; features still alive there are left out (the plot header shows how many were cut). <b>Normalize</b> (log-log scale only) plots z = (log log x − μ) / σ, with the mean μ and standard deviation σ of log log x taken separately for each sample (signal loops excluded). PDF shows a kernel density estimate of the variable on the x-axis as drawn (e.g. of log log x on the log-log scale); for degrees it shows the PMF. <b>Overlay</b> merges the three ECDFs into one plot; <b>Split</b> separates them again. For H₁, the x-axis range ignores the signal cycles of the annulus (1) and the torus (2) (their values still count in the ECDF). Hover a plot to read F(x). Log-log puts log(log x) on the x-axis, so it is offered only when every value is above 1; log needs every value above 0. All four functionals are scale-free, so the distributions offer only shape parameters. The sphere and torus are listed under 2D because they are 2-dimensional surfaces; they are sampled and drawn in 3D space.</p>
+  </footer>
+</div>
+
+<!-- Worker sources: Delaunator 5.0.1 (ISC, github.com/mapbox/delaunator), the persistence engine, and the functional code. Not executed on the page; loaded into Web Workers. -->
+<script type="javascript/worker" id="dlSrc">!function(t,i){"object"==typeof exports&&"undefined"!=typeof module?module.exports=i():"function"==typeof define&&define.amd?define(i):(t="undefined"!=typeof globalThis?globalThis:t||self).Delaunator=i()}(this,(function(){"use strict";const t=11102230246251565e-32,i=134217729,s=(3+8*t)*t;function e(t,i,s,e,n){let h,r,l,o,a=i[0],f=e[0],c=0,u=0;f>a==f>-a?(h=a,a=i[++c]):(h=f,f=e[++u]);let _=0;if(c<t&&u<s)for(f>a==f>-a?(r=a+h,l=h-(r-a),a=i[++c]):(r=f+h,l=h-(r-f),f=e[++u]),h=r,0!==l&&(n[_++]=l);c<t&&u<s;)f>a==f>-a?(r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c]):(r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u]),h=r,0!==l&&(n[_++]=l);for(;c<t;)r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c],h=r,0!==l&&(n[_++]=l);for(;u<s;)r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u],h=r,0!==l&&(n[_++]=l);return 0===h&&0!==_||(n[_++]=h),_}function n(t){return new Float64Array(t)}const h=22204460492503146e-32,r=11093356479670487e-47,l=n(4),o=n(8),a=n(12),f=n(16),c=n(4);function u(t,n,u,_,d,g){const y=(n-g)*(u-d),w=(t-d)*(_-g),b=y-w,A=Math.abs(y+w);return Math.abs(b)>=33306690738754716e-32*A?b:-function(t,n,u,_,d,g,y){let w,b,A,k,M,p,x,S,T,z,U,m,K,L,v,F,P,E;const H=t-d,I=u-d,N=n-g,j=_-g;L=H*j,p=i*H,x=p-(p-H),S=H-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=N*I,p=i*N,x=p-(p-N),S=N-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,l[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,l[1]=K-(U+M)+(M-F),E=m+U,M=E-m,l[2]=m-(E-M)+(U-M),l[3]=E;let q=function(t,i){let s=i[0];for(let e=1;e<t;e++)s+=i[e];return s}(4,l),D=h*y;if(q>=D||-q>=D)return q;if(M=t-H,w=t-(H+M)+(M-d),M=u-I,A=u-(I+M)+(M-d),M=n-N,b=n-(N+M)+(M-g),M=_-j,k=_-(j+M)+(M-g),0===w&&0===b&&0===A&&0===k)return q;if(D=r*y+s*Math.abs(q),q+=H*k+j*w-(N*A+I*b),q>=D||-q>=D)return q;L=w*j,p=i*w,x=p-(p-w),S=w-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=b*I,p=i*b,x=p-(p-b),S=b-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const B=e(4,l,4,c,o);L=H*k,p=i*H,x=p-(p-H),S=H-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=N*A,p=i*N,x=p-(p-N),S=N-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const C=e(B,o,4,c,a);L=w*k,p=i*w,x=p-(p-w),S=w-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=b*A,p=i*b,x=p-(p-b),S=b-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const G=e(C,a,4,c,f);return f[G-1]}(t,n,u,_,d,g,A)}const _=Math.pow(2,-52),d=new Uint32Array(512);class g{static from(t,i=M,s=p){const e=t.length,n=new Float64Array(2*e);for(let h=0;h<e;h++){const e=t[h];n[2*h]=i(e),n[2*h+1]=s(e)}return new g(n)}constructor(t){const i=t.length>>1;if(i>0&&"number"!=typeof t[0])throw new Error("Expected coords to contain numbers.");this.coords=t;const s=Math.max(2*i-5,0);this._triangles=new Uint32Array(3*s),this._halfedges=new Int32Array(3*s),this._hashSize=Math.ceil(Math.sqrt(i)),this._hullPrev=new Uint32Array(i),this._hullNext=new Uint32Array(i),this._hullTri=new Uint32Array(i),this._hullHash=new Int32Array(this._hashSize),this._ids=new Uint32Array(i),this._dists=new Float64Array(i),this.update()}update(){const{coords:t,_hullPrev:i,_hullNext:s,_hullTri:e,_hullHash:n}=this,h=t.length>>1;let r=1/0,l=1/0,o=-1/0,a=-1/0;for(let i=0;i<h;i++){const s=t[2*i],e=t[2*i+1];s<r&&(r=s),e<l&&(l=e),s>o&&(o=s),e>a&&(a=e),this._ids[i]=i}const f=(r+o)/2,c=(l+a)/2;let d,g,w;for(let i=0,s=1/0;i<h;i++){const e=y(f,c,t[2*i],t[2*i+1]);e<s&&(d=i,s=e)}const k=t[2*d],M=t[2*d+1];for(let i=0,s=1/0;i<h;i++){if(i===d)continue;const e=y(k,M,t[2*i],t[2*i+1]);e<s&&e>0&&(g=i,s=e)}let p=t[2*g],x=t[2*g+1],S=1/0;for(let i=0;i<h;i++){if(i===d||i===g)continue;const s=b(k,M,p,x,t[2*i],t[2*i+1]);s<S&&(w=i,S=s)}let T=t[2*w],z=t[2*w+1];if(S===1/0){for(let i=0;i<h;i++)this._dists[i]=t[2*i]-t[0]||t[2*i+1]-t[1];A(this._ids,this._dists,0,h-1);const i=new Uint32Array(h);let s=0;for(let t=0,e=-1/0;t<h;t++){const n=this._ids[t],h=this._dists[n];h>e&&(i[s++]=n,e=h)}return this.hull=i.subarray(0,s),this.triangles=new Uint32Array(0),void(this.halfedges=new Uint32Array(0))}if(u(k,M,p,x,T,z)<0){const t=g,i=p,s=x;g=w,p=T,x=z,w=t,T=i,z=s}const U=function(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o);return{x:t+(a*f-l*c)*u,y:i+(r*c-o*f)*u}}(k,M,p,x,T,z);this._cx=U.x,this._cy=U.y;for(let i=0;i<h;i++)this._dists[i]=y(t[2*i],t[2*i+1],U.x,U.y);A(this._ids,this._dists,0,h-1),this._hullStart=d;let m=3;s[d]=i[w]=g,s[g]=i[d]=w,s[w]=i[g]=d,e[d]=0,e[g]=1,e[w]=2,n.fill(-1),n[this._hashKey(k,M)]=d,n[this._hashKey(p,x)]=g,n[this._hashKey(T,z)]=w,this.trianglesLen=0,this._addTriangle(d,g,w,-1,-1,-1);for(let h,r,l=0;l<this._ids.length;l++){const o=this._ids[l],a=t[2*o],f=t[2*o+1];if(l>0&&Math.abs(a-h)<=_&&Math.abs(f-r)<=_)continue;if(h=a,r=f,o===d||o===g||o===w)continue;let c=0;for(let t=0,i=this._hashKey(a,f);t<this._hashSize&&(c=n[(i+t)%this._hashSize],-1===c||c===s[c]);t++);c=i[c];let y,b=c;for(;y=s[b],u(a,f,t[2*b],t[2*b+1],t[2*y],t[2*y+1])>=0;)if(b=y,b===c){b=-1;break}if(-1===b)continue;let A=this._addTriangle(b,o,s[b],-1,-1,e[b]);e[o]=this._legalize(A+2),e[b]=A,m++;let k=s[b];for(;y=s[k],u(a,f,t[2*k],t[2*k+1],t[2*y],t[2*y+1])<0;)A=this._addTriangle(k,o,y,e[o],-1,e[k]),e[o]=this._legalize(A+2),s[k]=k,m--,k=y;if(b===c)for(;y=i[b],u(a,f,t[2*y],t[2*y+1],t[2*b],t[2*b+1])<0;)A=this._addTriangle(y,o,b,-1,e[b],e[y]),this._legalize(A+2),e[y]=A,s[b]=b,m--,b=y;this._hullStart=i[o]=b,s[b]=i[k]=o,s[o]=k,n[this._hashKey(a,f)]=o,n[this._hashKey(t[2*b],t[2*b+1])]=b}this.hull=new Uint32Array(m);for(let t=0,i=this._hullStart;t<m;t++)this.hull[t]=i,i=s[i];this.triangles=this._triangles.subarray(0,this.trianglesLen),this.halfedges=this._halfedges.subarray(0,this.trianglesLen)}_hashKey(t,i){return Math.floor(function(t,i){const s=t/(Math.abs(t)+Math.abs(i));return(i>0?3-s:1+s)/4}(t-this._cx,i-this._cy)*this._hashSize)%this._hashSize}_legalize(t){const{_triangles:i,_halfedges:s,coords:e}=this;let n=0,h=0;for(;;){const r=s[t],l=t-t%3;if(h=l+(t+2)%3,-1===r){if(0===n)break;t=d[--n];continue}const o=r-r%3,a=l+(t+1)%3,f=o+(r+2)%3,c=i[h],u=i[t],_=i[a],g=i[f];if(w(e[2*c],e[2*c+1],e[2*u],e[2*u+1],e[2*_],e[2*_+1],e[2*g],e[2*g+1])){i[t]=g,i[r]=c;const e=s[f];if(-1===e){let i=this._hullStart;do{if(this._hullTri[i]===f){this._hullTri[i]=t;break}i=this._hullPrev[i]}while(i!==this._hullStart)}this._link(t,e),this._link(r,s[h]),this._link(h,f);const l=o+(r+1)%3;n<d.length&&(d[n++]=l)}else{if(0===n)break;t=d[--n]}}return h}_link(t,i){this._halfedges[t]=i,-1!==i&&(this._halfedges[i]=t)}_addTriangle(t,i,s,e,n,h){const r=this.trianglesLen;return this._triangles[r]=t,this._triangles[r+1]=i,this._triangles[r+2]=s,this._link(r,e),this._link(r+1,n),this._link(r+2,h),this.trianglesLen+=3,r}}function y(t,i,s,e){const n=t-s,h=i-e;return n*n+h*h}function w(t,i,s,e,n,h,r,l){const o=t-r,a=i-l,f=s-r,c=e-l,u=n-r,_=h-l,d=f*f+c*c,g=u*u+_*_;return o*(c*g-d*_)-a*(f*g-d*u)+(o*o+a*a)*(f*_-c*u)<0}function b(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o),_=(a*f-l*c)*u,d=(r*c-o*f)*u;return _*_+d*d}function A(t,i,s,e){if(e-s<=20)for(let n=s+1;n<=e;n++){const e=t[n],h=i[e];let r=n-1;for(;r>=s&&i[t[r]]>h;)t[r+1]=t[r--];t[r+1]=e}else{let n=s+1,h=e;k(t,s+e>>1,n),i[t[s]]>i[t[e]]&&k(t,s,e),i[t[n]]>i[t[e]]&&k(t,n,e),i[t[s]]>i[t[n]]&&k(t,s,n);const r=t[n],l=i[r];for(;;){do{n++}while(i[t[n]]<l);do{h--}while(i[t[h]]>l);if(h<n)break;k(t,n,h)}t[s+1]=t[h],t[h]=r,e-n+1>=h-s?(A(t,i,n,e),A(t,i,s,h-1)):(A(t,i,s,h-1),A(t,i,n,e))}}function k(t,i,s){const e=t[i];t[i]=t[s],t[s]=e}function M(t){return t[0]}function p(t){return t[1]}return g}));</script>
+<script type="javascript/worker" id="engSrc">
+// ===== Persistent homology engine (H0, H1) for Rips and Alpha complexes =====
+// All filtration values are reported on the "ball radius" scale r:
+//   Rips : edge appears at r = |x-y|/2
+//   Alpha: simplex appears at r = sqrt(alpha^2 value)
+(function (root) {
+  'use strict';
+
+  // ---------- random ----------
+  function rng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(R) {
+    let u = 0; while (u === 0) u = R();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * R());
+  }
+
+  // ---------- samplers: return {dim, pts: Float64Array(n*3)} (z=0 for 2D) ----------
+  const CLOUDS = {
+    box2:    { label: 'Uniform · 2D box',    dim: 2 },
+    box3:    { label: 'Uniform · 3D box',    dim: 3 },
+    normal2: { label: 'Gaussian · 2D',       dim: 2 },
+    normal3: { label: 'Gaussian · 3D',       dim: 3 },
+    annulus: { label: 'Uniform · annulus',   dim: 2 },
+    sphere:  { label: 'Uniform · sphere',    dim: 3 },
+    torus:   { label: 'Uniform · torus',     dim: 3 },
+    mix2:    { label: 'Gaussian mixture · 2D', dim: 2 },
+    mix3:    { label: 'Gaussian mixture · 3D', dim: 3 },
+  };
+  // opt: { annIn, annOut, torR, torr, mixK, mixSigma }
+  function sample(kind, n, seed, opt) {
+    opt = opt || {};
+    const R = rng(seed), P = new Float64Array(n * 3);
+    const dim = CLOUDS[kind].dim;
+    let centers = null;
+    if (kind === 'mix2' || kind === 'mix3') {
+      const Rc = rng((seed * 2654435761) >>> 0 ^ 0x9e3779b9), K = Math.max(1, opt.mixK || 4);
+      centers = [];
+      for (let c = 0; c < K; c++) centers.push([Rc(), Rc(), dim === 3 ? Rc() : 0]);
+    }
+    for (let i = 0; i < n; i++) {
+      let x = 0, y = 0, z = 0;
+      switch (kind) {
+        case 'box2': x = R(); y = R(); break;
+        case 'box3': x = R(); y = R(); z = R(); break;
+        case 'normal2': x = gauss(R); y = gauss(R); break;
+        case 'normal3': x = gauss(R); y = gauss(R); z = gauss(R); break;
+        case 'annulus': {
+          const r0 = opt.annIn ?? 0.6, r1 = opt.annOut ?? 1;
+          const r = Math.sqrt(R() * (r1 * r1 - r0 * r0) + r0 * r0), t = 2 * Math.PI * R();
+          x = r * Math.cos(t); y = r * Math.sin(t); break;
+        }
+        case 'sphere': {
+          let a, b, c, s;
+          do { a = gauss(R); b = gauss(R); c = gauss(R); s = Math.hypot(a, b, c); } while (s < 1e-9);
+          x = a / s; y = b / s; z = c / s; break;
+        }
+        case 'torus': {
+          const Rr = opt.torR ?? 1, rr = opt.torr ?? 0.4; let th, ph;
+          do { th = 2 * Math.PI * R(); ph = 2 * Math.PI * R(); }
+          while (R() > (Rr + rr * Math.cos(th)) / (Rr + rr));
+          x = (Rr + rr * Math.cos(th)) * Math.cos(ph);
+          y = (Rr + rr * Math.cos(th)) * Math.sin(ph);
+          z = rr * Math.sin(th); break;
+        }
+        case 'mix2': case 'mix3': {
+          const c = centers[Math.floor(R() * centers.length)], sg = opt.mixSigma ?? 0.06;
+          x = c[0] + sg * gauss(R); y = c[1] + sg * gauss(R); if (dim === 3) z = c[2] + sg * gauss(R);
+          break;
+        }
+      }
+      P[3 * i] = x; P[3 * i + 1] = y; P[3 * i + 2] = z;
+    }
+    return { dim, pts: P, n, centers };
+  }
+
+  // ---------- union find ----------
+  function UF(n) {
+    const p = new Int32Array(n); for (let i = 0; i < n; i++) p[i] = i;
+    return {
+      p,
+      find(x) { while (p[x] !== x) { p[x] = p[p[x]]; x = p[x]; } return x; },
+    };
+  }
+
+  // ---------- H0 with k-cluster persistence (Bobrowski & Skraba 2023) ----------
+  // edges: sorted arrays eu, ev, ew (ascending w). k=1 gives standard H0.
+  function clusterH0(n, eu, ev, ew, k) {
+    const uf = UF(n), size = new Int32Array(n).fill(1);
+    const tau = new Float64Array(n).fill(k <= 1 ? 0 : Infinity); // root's birth (min over comp)
+    const bars = [];
+    for (let i = 0; i < ew.length; i++) {
+      let a = uf.find(eu[i]), b = uf.find(ev[i]);
+      if (a === b) continue;
+      const w = ew[i], sa = size[a], sb = size[b];
+      if (sa >= k && sb >= k) {
+        const birth = Math.max(tau[a], tau[b]);
+        if (w > birth) bars.push([birth, w]);
+      } else if (sa + sb >= k) {
+        if (sa < k) tau[a] = w;
+        if (sb < k) tau[b] = w;
+      }
+      if (sa < sb) { const t = a; a = b; b = t; }
+      uf.p[b] = a; size[a] = sa + sb; tau[a] = Math.min(tau[a], tau[b]);
+    }
+    // essential classes: surviving components with >= k points
+    for (let i = 0; i < n; i++) if (uf.find(i) === i && size[i] >= k) bars.push([tau[i], Infinity]);
+    return bars;
+  }
+
+  // ---------- Rips ----------
+  function distMatrix(P, n) {
+    const D = new Float64Array(n * n);
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const dx = P[3 * i] - P[3 * j], dy = P[3 * i + 1] - P[3 * j + 1], dz = P[3 * i + 2] - P[3 * j + 2];
+      D[i * n + j] = D[j * n + i] = Math.sqrt(dx * dx + dy * dy + dz * dz) / 2; // radius scale
+    }
+    return D;
+  }
+
+  // Binary heap of triangles keyed by (diam, idx)
+  function Heap() {
+    const d = [], x = [];
+    function less(i, j) { return d[i] < d[j] || (d[i] === d[j] && x[i] < x[j]); }
+    function sw(i, j) { let t = d[i]; d[i] = d[j]; d[j] = t; t = x[i]; x[i] = x[j]; x[j] = t; }
+    return {
+      size() { return d.length; },
+      push(dd, xx) {
+        d.push(dd); x.push(xx); let i = d.length - 1;
+        while (i > 0) { const p = (i - 1) >> 1; if (less(i, p)) { sw(i, p); i = p; } else break; }
+      },
+      top() { return [d[0], x[0]]; },
+      pop() {
+        const r = [d[0], x[0]], ld = d.pop(), lx = x.pop();
+        if (d.length) {
+          d[0] = ld; x[0] = lx; let i = 0;
+          for (;;) {
+            const l = 2 * i + 1, rr = l + 1; let m = i;
+            if (l < d.length && less(l, m)) m = l;
+            if (rr < d.length && less(rr, m)) m = rr;
+            if (m === i) break; sw(i, m); i = m;
+          }
+        }
+        return r;
+      },
+    };
+  }
+
+  function rips(P, n) {
+    const D = distMatrix(P, n);
+    const m = n * (n - 1) / 2;
+    const EU = new Int32Array(m), EV = new Int32Array(m), EW = new Float64Array(m);
+    let c = 0;
+    for (let j = 1; j < n; j++) for (let i = 0; i < j; i++) { EU[c] = i; EV[c] = j; EW[c] = D[i * n + j]; c++; }
+    const ord = new Int32Array(m); for (let i = 0; i < m; i++) ord[i] = i;
+    ord.sort((a, b) => EW[a] - EW[b] || a - b);
+    const eu = new Int32Array(m), ev = new Int32Array(m), ew = new Float64Array(m);
+    for (let r = 0; r < m; r++) { eu[r] = EU[ord[r]]; ev[r] = EV[ord[r]]; ew[r] = EW[ord[r]]; }
+
+    // H0 pairs (to clear) via Kruskal
+    const uf = UF(n), negative = new Uint8Array(m);
+    for (let r = 0; r < m; r++) {
+      const a = uf.find(eu[r]), b = uf.find(ev[r]);
+      if (a !== b) { uf.p[a] = b; negative[r] = 1; }
+    }
+
+    // H1 via persistent cohomology (ripser-style, implicit coboundaries)
+    // triangle id = (sorted a<b<c) a + n*(b + n*c); order by (diam, id)
+    const N = n;
+    function triId(a, b, w) {
+      let x = a, y = b, z = w, t;
+      if (x > y) { t = x; x = y; y = t; } if (y > z) { t = y; y = z; z = t; } if (x > y) { t = x; x = y; y = t; }
+      return x + N * (y + N * z);
+    }
+    function minCoface(r) {
+      const a = eu[r], b = ev[r], base = ew[r];
+      let bd = Infinity, bi = Infinity;
+      for (let w = 0; w < n; w++) {
+        if (w === a || w === b) continue;
+        let dd = D[a * n + w]; const d2 = D[b * n + w];
+        if (d2 > dd) dd = d2; if (base > dd) dd = base;
+        if (dd < bd) { bd = dd; bi = triId(a, b, w); }
+        else if (dd === bd) { const id = triId(a, b, w); if (id < bi) bi = id; }
+      }
+      return [bd, bi];
+    }
+    function pushCoboundary(H, r) {
+      const a = eu[r], b = ev[r], base = ew[r];
+      for (let w = 0; w < n; w++) {
+        if (w === a || w === b) continue;
+        let dd = D[a * n + w]; const d2 = D[b * n + w];
+        if (d2 > dd) dd = d2; if (base > dd) dd = base;
+        H.push(dd, triId(a, b, w));
+      }
+    }
+    function popPivot(H) { // Z2: cancel equal pairs
+      while (H.size()) {
+        const t = H.pop();
+        if (H.size() && H.top()[1] === t[1]) { H.pop(); continue; }
+        return t;
+      }
+      return null;
+    }
+    const pivotOf = new Map(); // triangle id -> column (edge rank)
+    const V = new Map();       // edge rank -> array of edge ranks (reduction), only if non-trivial
+    const bars1 = [];
+    for (let r = m - 1; r >= 0; r--) {
+      if (negative[r]) continue;
+      let piv = minCoface(r);
+      if (piv[0] === Infinity) { bars1.push([ew[r], Infinity, [r]]); continue; }
+      if (!pivotOf.has(piv[1])) { pivotOf.set(piv[1], r); if (piv[0] > ew[r]) bars1.push([ew[r], piv[0], [r]]); continue; }
+      // full reduction with heap
+      const H = Heap(); pushCoboundary(H, r);
+      const vr = [r];
+      piv = popPivot(H);
+      while (piv && pivotOf.has(piv[1])) {
+        H.push(piv[0], piv[1]);
+        const j = pivotOf.get(piv[1]);
+        const vj = V.get(j) || [j];
+        for (const e of vj) { pushCoboundary(H, e); vr.push(e); }
+        piv = popPivot(H);
+      }
+      // reduced V column (mod 2) = representative cocycle (edge ranks)
+      const cnt = new Map(); for (const e of vr) cnt.set(e, (cnt.get(e) || 0) ^ 1);
+      const vv = []; for (const [e, o] of cnt) if (o) vv.push(e);
+      if (!piv) { bars1.push([ew[r], Infinity, vv]); continue; }
+      pivotOf.set(piv[1], r);
+      if (vv.length > 1) V.set(r, vv);
+      if (piv[0] > ew[r]) bars1.push([ew[r], piv[0], vv]);
+    }
+    return { eu, ev, ew, D, bars1, n };
+  }
+
+  // ---------- 3D Delaunay (Bowyer–Watson with cavity repair) ----------
+  function orient3(P, a, b, c, d) {
+    const ax = P[3*a]-P[3*d], ay = P[3*a+1]-P[3*d+1], az = P[3*a+2]-P[3*d+2];
+    const bx = P[3*b]-P[3*d], by = P[3*b+1]-P[3*d+1], bz = P[3*b+2]-P[3*d+2];
+    const cx = P[3*c]-P[3*d], cy = P[3*c+1]-P[3*d+1], cz = P[3*c+2]-P[3*d+2];
+    return ax*(by*cz-bz*cy) - ay*(bx*cz-bz*cx) + az*(bx*cy-by*cx);
+  }
+  function circumsphere(P, a, b, c, d) {
+    const ox = P[3*a], oy = P[3*a+1], oz = P[3*a+2];
+    const bx = P[3*b]-ox, by = P[3*b+1]-oy, bz = P[3*b+2]-oz;
+    const cx = P[3*c]-ox, cy = P[3*c+1]-oy, cz = P[3*c+2]-oz;
+    const dx = P[3*d]-ox, dy = P[3*d+1]-oy, dz = P[3*d+2]-oz;
+    const b2 = bx*bx+by*by+bz*bz, c2 = cx*cx+cy*cy+cz*cz, d2 = dx*dx+dy*dy+dz*dz;
+    const det = 2 * (bx*(cy*dz-cz*dy) - by*(cx*dz-cz*dx) + bz*(cx*dy-cy*dx));
+    if (Math.abs(det) < 1e-300) return [ox, oy, oz, Infinity];
+    // Cramer's rule
+    const Ux = ( b2*(cy*dz-cz*dy) - by*(c2*dz-cz*d2) + bz*(c2*dy-cy*d2) ) / det;
+    const Uy = ( bx*(c2*dz-cz*d2) - b2*(cx*dz-cz*dx) + bz*(cx*d2-c2*dx) ) / det;
+    const Uz = ( bx*(cy*d2-c2*dy) - by*(cx*d2-c2*dx) + b2*(cx*dy-cy*dx) ) / det;
+    return [ox + Ux, oy + Uy, oz + Uz, Ux*Ux + Uy*Uy + Uz*Uz];
+  }
+  const FACE = [[1, 2, 3], [0, 3, 2], [0, 1, 3], [0, 2, 1]]; // face opposite vertex i (outward for + tet)
+
+  function delaunay3(Pin, n) {
+    // extended point array with 4 super vertices
+    const P = new Float64Array((n + 4) * 3); P.set(Pin.subarray(0, n * 3));
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < n; i++) { cx += P[3*i]; cy += P[3*i+1]; cz += P[3*i+2]; }
+    cx /= n; cy /= n; cz /= n;
+    let rad = 0;
+    for (let i = 0; i < n; i++) rad = Math.max(rad, Math.hypot(P[3*i]-cx, P[3*i+1]-cy, P[3*i+2]-cz));
+    const S = 2000 * (rad || 1);
+    const sv = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]];
+    for (let k = 0; k < 4; k++) { P[3*(n+k)] = cx + S*sv[k][0]; P[3*(n+k)+1] = cy + S*sv[k][1]; P[3*(n+k)+2] = cz + S*sv[k][2]; }
+
+    const T = [], NB = [], CS = [], alive = [];
+    function addTet(a, b, c, d) {
+      if (orient3(P, a, b, c, d) < 0) { const t = a; a = b; b = t; }
+      const id = T.length; T.push([a, b, c, d]); NB.push([-1, -1, -1, -1]);
+      CS.push(circumsphere(P, a, b, c, d)); alive.push(true); return id;
+    }
+    addTet(n, n + 1, n + 2, n + 3);
+    function inSphere(t, p) {
+      const s = CS[t];
+      const dx = P[3*p]-s[0], dy = P[3*p+1]-s[1], dz = P[3*p+2]-s[2];
+      return dx*dx + dy*dy + dz*dz < s[3] * (1 - 1e-12);
+    }
+    function contains(t, p) {
+      const v = T[t];
+      for (let i = 0; i < 4; i++) {
+        const f = FACE[i];
+        // p must be on same side of face as v[i]
+        if (orient3(P, v[f[0]], v[f[1]], v[f[2]], p) * orient3(P, v[f[0]], v[f[1]], v[f[2]], v[i]) < 0) return false;
+      }
+      return true;
+    }
+    let last = 0;
+    for (let p = 0; p < n; p++) {
+      // locate by walking
+      let t = last; if (!alive[t]) { t = alive.lastIndexOf(true); }
+      let guard = 0;
+      walk: while (guard++ < 10 * T.length + 100) {
+        const v = T[t];
+        for (let i = 0; i < 4; i++) {
+          const f = FACE[i];
+          const sp = orient3(P, v[f[0]], v[f[1]], v[f[2]], p);
+          const sv_ = orient3(P, v[f[0]], v[f[1]], v[f[2]], v[i]);
+          if (sp * sv_ < 0 && NB[t][i] >= 0) { t = NB[t][i]; continue walk; }
+        }
+        break;
+      }
+      if (!contains(t, p)) { // fallback scan
+        for (let s = 0; s < T.length; s++) if (alive[s] && contains(s, p)) { t = s; break; }
+      }
+      // cavity BFS
+      const inCav = new Set([t]), stack = [t];
+      while (stack.length) {
+        const s = stack.pop();
+        for (let i = 0; i < 4; i++) {
+          const nb = NB[s][i];
+          if (nb >= 0 && !inCav.has(nb) && inSphere(nb, p)) { inCav.add(nb); stack.push(nb); }
+        }
+      }
+      // repair: ensure every boundary face is visible from p
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const s of inCav) {
+          const v = T[s];
+          for (let i = 0; i < 4; i++) {
+            const nb = NB[s][i];
+            if (nb >= 0 && inCav.has(nb)) continue;
+            const f = FACE[i];
+            const o = orient3(P, v[f[0]], v[f[1]], v[f[2]], p);
+            // outward-facing face for positively oriented tet: p must be on the inner side (o < 0 means... check sign)
+            const ov = orient3(P, v[f[0]], v[f[1]], v[f[2]], v[i]);
+            if (!(o * ov > 0) && nb >= 0) { inCav.add(nb); changed = true; }
+          }
+          if (changed) break;
+        }
+      }
+      // collect boundary faces & create tets
+      const newT = [], edgeMap = new Map();
+      for (const s of inCav) {
+        const v = T[s];
+        for (let i = 0; i < 4; i++) {
+          const nb = NB[s][i];
+          if (nb >= 0 && inCav.has(nb)) continue;
+          const f = FACE[i];
+          const a = v[f[0]], b = v[f[1]], c = v[f[2]];
+          const id = addTet(a, b, c, p);
+          newT.push(id);
+          // neighbor across face (a,b,c) is nb; in new tet, p is at index 3 -> face opposite p is index 3
+          const tv = T[id];
+          const pi = tv.indexOf(p);
+          NB[id][pi] = nb;
+          if (nb >= 0) {
+            const nv = T[nb];
+            for (let j = 0; j < 4; j++) if (nv[j] !== a && nv[j] !== b && nv[j] !== c) { NB[nb][j] = id; break; }
+          }
+          // other faces contain p and an edge of (a,b,c)
+          for (let j = 0; j < 4; j++) {
+            if (j === pi) continue;
+            const ov = [];
+            for (let q = 0; q < 4; q++) if (q !== j && tv[q] !== p) ov.push(tv[q]);
+            const key = ov[0] < ov[1] ? ov[0] * 1e6 + ov[1] : ov[1] * 1e6 + ov[0];
+            const prev = edgeMap.get(key);
+            if (prev) { NB[id][j] = prev[0]; NB[prev[0]][prev[1]] = id; edgeMap.delete(key); }
+            else edgeMap.set(key, [id, j]);
+          }
+        }
+      }
+      for (const s of inCav) alive[s] = false;
+      last = newT[0];
+    }
+    const tets = [];
+    for (let t = 0; t < T.length; t++) {
+      if (!alive[t]) continue;
+      const v = T[t];
+      if (v[0] >= n || v[1] >= n || v[2] >= n || v[3] >= n) continue;
+      tets.push(v.slice().sort((a, b) => a - b));
+    }
+    return tets;
+  }
+
+  // ---------- Alpha complex ----------
+  // returns simplices with filtration value (squared radius)
+  function alphaComplex(P, n, dim, Delaunator) {
+    let tops;
+    if (dim === 2) {
+      const coords = new Float64Array(2 * n);
+      for (let i = 0; i < n; i++) { coords[2*i] = P[3*i]; coords[2*i+1] = P[3*i+1]; }
+      const d = new Delaunator(coords);
+      tops = [];
+      for (let t = 0; t < d.triangles.length; t += 3) {
+        const v = [d.triangles[t], d.triangles[t+1], d.triangles[t+2]].sort((a, b) => a - b);
+        tops.push(v);
+      }
+    } else {
+      tops = delaunay3(P, n);
+    }
+    const d2 = (a, b) => { const x = P[3*a]-P[3*b], y = P[3*a+1]-P[3*b+1], z = P[3*a+2]-P[3*b+2]; return x*x+y*y+z*z; };
+    // circumcenter of triangle in 3D (plane), returns [cx,cy,cz,r2]
+    function triCirc(a, b, c) {
+      const ax = P[3*a], ay = P[3*a+1], az = P[3*a+2];
+      const ux = P[3*b]-ax, uy = P[3*b+1]-ay, uz = P[3*b+2]-az;
+      const vx = P[3*c]-ax, vy = P[3*c+1]-ay, vz = P[3*c+2]-az;
+      const uu = ux*ux+uy*uy+uz*uz, vv = vx*vx+vy*vy+vz*vz, uv = ux*vx+uy*vy+uz*vz;
+      const den = 2 * (uu * vv - uv * uv);
+      const s = vv * (uu - uv) / den, t = uu * (vv - uv) / den;
+      const x = s*ux + t*vx, y = s*uy + t*vy, z = s*uz + t*vz;
+      return [ax + x, ay + y, az + z, x*x + y*y + z*z];
+    }
+    const inBall = (c, w) => { const x = P[3*w]-c[0], y = P[3*w+1]-c[1], z = P[3*w+2]-c[2]; return x*x+y*y+z*z < c[3] * (1 - 1e-12); };
+
+    const triMap = new Map(), tris = [], triF = [], triCof = []; // triCof: list of [opposite vertex, top index]
+    const edgeMap = new Map(), edges = [], edgeF = [], edgeCof = [];
+    const K = n + 1;
+    const ekey = (a, b) => a * K + b;
+    const tkey = (a, b, c) => (a * K + b) * K + c;
+    function getEdge(a, b) {
+      const k = ekey(a, b); let id = edgeMap.get(k);
+      if (id === undefined) { id = edges.length; edgeMap.set(k, id); edges.push([a, b]); edgeF.push(NaN); edgeCof.push([]); }
+      return id;
+    }
+    function getTri(a, b, c) {
+      const k = tkey(a, b, c); let id = triMap.get(k);
+      if (id === undefined) { id = tris.length; triMap.set(k, id); tris.push([a, b, c]); triF.push(NaN); triCof.push([]); }
+      return id;
+    }
+    let tetF = [];
+    if (dim === 3) {
+      tetF = tops.map(v => circumsphere(P, v[0], v[1], v[2], v[3])[3]);
+      tops.forEach((v, ti) => {
+        for (let i = 0; i < 4; i++) {
+          const f = v.filter((_, j) => j !== i);
+          triCof[getTri(f[0], f[1], f[2])].push([v[i], ti]);
+        }
+      });
+      for (let t = 0; t < tris.length; t++) {
+        const [a, b, c] = tris[t];
+        const cc = triCirc(a, b, c);
+        let att = false, mn = Infinity;
+        for (const [w, ti] of triCof[t]) { if (inBall(cc, w)) att = true; mn = Math.min(mn, tetF[ti]); }
+        triF[t] = att ? mn : cc[3];
+      }
+    } else {
+      tops.forEach(v => { const t = getTri(v[0], v[1], v[2]); triF[t] = triCirc(v[0], v[1], v[2])[3]; });
+    }
+    for (let t = 0; t < tris.length; t++) {
+      const [a, b, c] = tris[t];
+      edgeCof[getEdge(a, b)].push([c, t]);
+      edgeCof[getEdge(a, c)].push([b, t]);
+      edgeCof[getEdge(b, c)].push([a, t]);
+    }
+    for (let e = 0; e < edges.length; e++) {
+      const [a, b] = edges[e];
+      const c = [(P[3*a]+P[3*b])/2, (P[3*a+1]+P[3*b+1])/2, (P[3*a+2]+P[3*b+2])/2, d2(a, b) / 4];
+      let att = false, mn = Infinity;
+      for (const [w, t] of edgeCof[e]) { if (inBall(c, w)) att = true; mn = Math.min(mn, triF[t]); }
+      edgeF[e] = att ? mn : c[3];
+    }
+    return { tops, tetF, tris, triF, edges, edgeF, dim };
+  }
+
+  // Z2 sorted-array symmetric difference
+  function xorSorted(a, b) {
+    const out = []; let i = 0, j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] < b[j]) out.push(a[i++]);
+      else if (a[i] > b[j]) out.push(b[j++]);
+      else { i++; j++; }
+    }
+    while (i < a.length) out.push(a[i++]);
+    while (j < b.length) out.push(b[j++]);
+    return out;
+  }
+
+  function alphaPersistence(P, n, dim, Delaunator, maxR, prebuilt) {
+    const A = prebuilt || alphaComplex(P, n, dim, Delaunator);
+    if (maxR != null && isFinite(maxR)) { // truncate the filtration: keep only simplices that appear by radius maxR
+      const m2 = maxR * maxR;
+      const ke = [], kf = []; A.edges.forEach((e, i) => { if (A.edgeF[i] <= m2) { ke.push(e); kf.push(A.edgeF[i]); } });
+      const kt = [], ktf = []; A.tris.forEach((t, i) => { if (A.triF[i] <= m2) { kt.push(t); ktf.push(A.triF[i]); } });
+      A.edges = ke; A.edgeF = kf; A.tris = kt; A.triF = ktf;
+    }
+    const sq = Math.sqrt;
+    // edges ordered
+    const E = A.edges.length;
+    const eord = Array.from({ length: E }, (_, i) => i).sort((a, b) => A.edgeF[a] - A.edgeF[b] || a - b);
+    const erank = new Int32Array(E); eord.forEach((e, r) => erank[e] = r);
+    const eu = new Int32Array(E), ev = new Int32Array(E), ew = new Float64Array(E);
+    eord.forEach((e, r) => { eu[r] = A.edges[e][0]; ev[r] = A.edges[e][1]; ew[r] = sq(A.edgeF[e]); });
+    const TN = A.tris.length;
+    const tord = Array.from({ length: TN }, (_, i) => i).sort((a, b) => A.triF[a] - A.triF[b] || a - b);
+    const trank = new Int32Array(TN); tord.forEach((t, r) => trank[t] = r);
+    const K = n + 1;
+    const edgeIdx = new Map(); A.edges.forEach(([a, b], i) => edgeIdx.set(a * K + b, i));
+
+    // H1 via persistent cohomology (gives a representative cocycle per bar)
+    const uf = UF(n), neg = new Uint8Array(E);
+    for (let r = 0; r < E; r++) { const a = uf.find(eu[r]), b = uf.find(ev[r]); if (a !== b) { uf.p[a] = b; neg[r] = 1; } }
+    const cob = Array.from({ length: E }, () => []);
+    for (let r = 0; r < TN; r++) {
+      const [a, b, c] = A.tris[tord[r]];
+      cob[erank[edgeIdx.get(a * K + b)]].push(r);
+      cob[erank[edgeIdx.get(a * K + c)]].push(r);
+      cob[erank[edgeIdx.get(b * K + c)]].push(r);
+    }
+    const pivotOf = new Map(), cols = new Map(), Vs = new Map(), bars1 = [];
+    for (let r = E - 1; r >= 0; r--) {
+      if (neg[r]) continue;
+      let col = cob[r], v = [r];
+      while (col.length && pivotOf.has(col[0])) {
+        const j = pivotOf.get(col[0]);
+        col = xorSorted(col, cols.get(j)); v = xorSorted(v, Vs.get(j));
+      }
+      if (!col.length) { bars1.push([ew[r], Infinity, v]); continue; }
+      pivotOf.set(col[0], r); cols.set(r, col); Vs.set(r, v);
+      const death = sq(A.triF[tord[col[0]]]);
+      if (death > ew[r]) bars1.push([ew[r], death, v]);
+    }
+    // positive edges that are not H0-negative and never killed -> essential (shouldn't happen)
+    return { eu, ev, ew, bars1, A, tord, n };
+  }
+
+  root.PH = { CLOUDS, sample, rips, alphaPersistence, alphaComplex, clusterH0, delaunay3, circumsphere };
+  if (typeof module !== 'undefined') module.exports = root.PH;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+</script>
+<script type="javascript/worker" id="wkSrc">
+// ===== Worker: computes one functional for one sample (one worker per sample, so the three run in parallel) =====
+'use strict';
+const KMAX = 20;
+const C = { ver: -1, P: null, n: 0, dim: 2, alpha: null, knn: null };
+
+// Morton (Z-order) sort: insertion order that keeps the 3D Delaunay walk short. Point order is irrelevant to every functional.
+function mortonSort(P, n) {
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < n; i++) for (let d = 0; d < 3; d++) { const v = P[3 * i + d]; if (v < mn[d]) mn[d] = v; if (v > mx[d]) mx[d] = v; }
+  const key = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const c = [0, 1, 2].map(d => Math.min(1023, Math.floor(1023 * (P[3 * i + d] - mn[d]) / ((mx[d] - mn[d]) || 1))));
+    let k = 0; for (let b = 9; b >= 0; b--) for (let d = 0; d < 3; d++) k = k * 2 + ((c[d] >> b) & 1);
+    key[i] = k;
+  }
+  const idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => key[a] - key[b]);
+  const Q = new Float64Array(3 * n);
+  idx.forEach((j, i) => { Q[3 * i] = P[3 * j]; Q[3 * i + 1] = P[3 * j + 1]; Q[3 * i + 2] = P[3 * j + 2]; });
+  return Q;
+}
+
+// Homology is computed only up to radius 5 x (largest nearest-neighbour distance); loops still alive there are dropped.
+function alphaOf() {
+  if (!C.alpha) {
+    const { K, dst } = knnOf();
+    let mx = 0; for (let i = 0; i < C.n; i++) if (dst[i * K] > mx) mx = dst[i * K];
+    C.maxR = 5 * mx;
+    C.alpha = PH.alphaPersistence(C.P, C.n, C.dim, self.Delaunator, C.maxR, C.dim === 3 ? alphaTrunc3(C.P, C.n, C.maxR) : null);
+  }
+  return C.alpha;
+}
+
+// ---------- 3D Delaunay, typed-array Bowyer–Watson (same algorithm as the engine's delaunay3, far fewer allocations) ----------
+function delaunay3fast(Pin, n) {
+  const P = new Float64Array((n + 4) * 3); P.set(Pin.subarray(0, n * 3));
+  let cx = 0, cy = 0, cz = 0;
+  for (let i = 0; i < n; i++) { cx += P[3*i]; cy += P[3*i+1]; cz += P[3*i+2]; }
+  cx /= n; cy /= n; cz /= n;
+  let rad = 0;
+  for (let i = 0; i < n; i++) rad = Math.max(rad, Math.hypot(P[3*i]-cx, P[3*i+1]-cy, P[3*i+2]-cz));
+  const S = 2000 * (rad || 1), sv = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]];
+  for (let k = 0; k < 4; k++) { P[3*(n+k)] = cx + S*sv[k][0]; P[3*(n+k)+1] = cy + S*sv[k][1]; P[3*(n+k)+2] = cz + S*sv[k][2]; }
+  function orient(a, b, c, d) {
+    const dx = P[3*d], dy = P[3*d+1], dz = P[3*d+2];
+    const ax = P[3*a]-dx, ay = P[3*a+1]-dy, az = P[3*a+2]-dz;
+    const bx = P[3*b]-dx, by = P[3*b+1]-dy, bz = P[3*b+2]-dz;
+    const qx = P[3*c]-dx, qy = P[3*c+1]-dy, qz = P[3*c+2]-dz;
+    return ax*(by*qz-bz*qy) - ay*(bx*qz-bz*qx) + az*(bx*qy-by*qx);
+  }
+  const F0 = [1, 0, 0, 0], F1 = [2, 3, 1, 2], F2 = [3, 2, 3, 1]; // face opposite vertex i (outward for + tet)
+  let cap = 16 * n + 64;
+  let V = new Int32Array(4 * cap), NB = new Int32Array(4 * cap), CS = new Float64Array(4 * cap), mark = new Int32Array(cap);
+  const alive = []; let T = 0; const free = [];
+  function grow() {
+    const c2 = cap * 2;
+    const V2 = new Int32Array(4 * c2); V2.set(V); V = V2;
+    const N2 = new Int32Array(4 * c2); N2.set(NB); NB = N2;
+    const C2 = new Float64Array(4 * c2); C2.set(CS); CS = C2;
+    const M2 = new Int32Array(c2); M2.set(mark); mark = M2;
+    cap = c2;
+  }
+  function addTet(a, b, c, d) {
+    if (orient(a, b, c, d) < 0) { const t = a; a = b; b = t; }
+    let id;
+    if (free.length) id = free.pop(); else { if (T >= cap) grow(); id = T++; }
+    V[4*id] = a; V[4*id+1] = b; V[4*id+2] = c; V[4*id+3] = d;
+    NB[4*id] = NB[4*id+1] = NB[4*id+2] = NB[4*id+3] = -1;
+    alive[id] = 1; mark[id] = 0;
+    // circumsphere
+    const ox = P[3*a], oy = P[3*a+1], oz = P[3*a+2];
+    const bx = P[3*b]-ox, by = P[3*b+1]-oy, bz = P[3*b+2]-oz;
+    const qx = P[3*c]-ox, qy = P[3*c+1]-oy, qz = P[3*c+2]-oz;
+    const dx = P[3*d]-ox, dy = P[3*d+1]-oy, dz = P[3*d+2]-oz;
+    const b2 = bx*bx+by*by+bz*bz, c2 = qx*qx+qy*qy+qz*qz, d2 = dx*dx+dy*dy+dz*dz;
+    const det = 2 * (bx*(qy*dz-qz*dy) - by*(qx*dz-qz*dx) + bz*(qx*dy-qy*dx));
+    if (Math.abs(det) < 1e-300) { CS[4*id] = ox; CS[4*id+1] = oy; CS[4*id+2] = oz; CS[4*id+3] = Infinity; return id; }
+    const Ux = ( b2*(qy*dz-qz*dy) - by*(c2*dz-qz*d2) + bz*(c2*dy-qy*d2) ) / det;
+    const Uy = ( bx*(c2*dz-qz*d2) - b2*(qx*dz-qz*dx) + bz*(qx*d2-c2*dx) ) / det;
+    const Uz = ( bx*(qy*d2-c2*dy) - by*(qx*d2-c2*dx) + b2*(qx*dy-qy*dx) ) / det;
+    CS[4*id] = ox + Ux; CS[4*id+1] = oy + Uy; CS[4*id+2] = oz + Uz; CS[4*id+3] = Ux*Ux + Uy*Uy + Uz*Uz;
+    return id;
+  }
+  const inSphere = (t, p) => { const x = P[3*p]-CS[4*t], y = P[3*p+1]-CS[4*t+1], z = P[3*p+2]-CS[4*t+2]; return x*x + y*y + z*z < CS[4*t+3] * (1 - 1e-12); };
+  const faceSide = (t, i, p) => { const b = 4*t; return orient(V[b+F0[i]], V[b+F1[i]], V[b+F2[i]], p) * orient(V[b+F0[i]], V[b+F1[i]], V[b+F2[i]], V[b+i]); };
+  function contains(t, p) { for (let i = 0; i < 4; i++) if (faceSide(t, i, p) < 0) return false; return true; }
+  addTet(n, n + 1, n + 2, n + 3);
+  let last = 0, stamp = 0;
+  const cav = [], edgeLink = new Map(), newT = [];
+  for (let p = 0; p < n; p++) {
+    let t = last;
+    if (!alive[t]) { t = -1; for (let s = T - 1; s >= 0; s--) if (alive[s]) { t = s; break; } }
+    let guard = 0;
+    walk: while (guard++ < 10 * T + 100) {
+      for (let i = 0; i < 4; i++) if (NB[4*t+i] >= 0 && faceSide(t, i, p) < 0) { t = NB[4*t+i]; continue walk; }
+      break;
+    }
+    if (!contains(t, p)) for (let s = 0; s < T; s++) if (alive[s] && contains(s, p)) { t = s; break; }
+    // cavity: tets whose circumsphere contains p, grown from t; then repaired so every boundary face sees p
+    stamp++; cav.length = 0; cav.push(t); mark[t] = stamp;
+    for (let k = 0; k < cav.length; k++) {
+      const s = cav[k];
+      for (let i = 0; i < 4; i++) { const nb = NB[4*s+i]; if (nb >= 0 && mark[nb] !== stamp && inSphere(nb, p)) { mark[nb] = stamp; cav.push(nb); } }
+    }
+    for (let k = 0; k < cav.length; k++) {
+      const s = cav[k];
+      for (let i = 0; i < 4; i++) { const nb = NB[4*s+i]; if (nb >= 0 && mark[nb] !== stamp && !(faceSide(s, i, p) > 0)) { mark[nb] = stamp; cav.push(nb); } }
+    }
+    // new tets on boundary faces
+    edgeLink.clear(); newT.length = 0;
+    const K2 = n + 4;
+    for (let k = 0; k < cav.length; k++) {
+      const s = cav[k];
+      for (let i = 0; i < 4; i++) {
+        const nb = NB[4*s+i];
+        if (nb >= 0 && mark[nb] === stamp) continue;
+        const a = V[4*s+F0[i]], b = V[4*s+F1[i]], c = V[4*s+F2[i]];
+        const id = addTet(a, b, c, p);
+        mark[id] = -1; // never confused with a cavity stamp
+        newT.push(id);
+        let pi = 0; while (V[4*id+pi] !== p) pi++;
+        NB[4*id+pi] = nb;
+        if (nb >= 0) for (let j = 0; j < 4; j++) { const x = V[4*nb+j]; if (x !== a && x !== b && x !== c) { NB[4*nb+j] = id; break; } }
+        for (let j = 0; j < 4; j++) {
+          if (j === pi) continue;
+          let u = -1, w = -1;
+          for (let q = 0; q < 4; q++) if (q !== j && V[4*id+q] !== p) { if (u < 0) u = V[4*id+q]; else w = V[4*id+q]; }
+          const key = u < w ? u * K2 + w : w * K2 + u;
+          const prev = edgeLink.get(key);
+          if (prev !== undefined) { const pt = prev >> 2, pj = prev & 3; NB[4*id+j] = pt; NB[4*pt+pj] = id; edgeLink.delete(key); }
+          else edgeLink.set(key, id * 4 + j);
+        }
+      }
+    }
+    for (let k = 0; k < cav.length; k++) { alive[cav[k]] = 0; free.push(cav[k]); }
+    last = newT[0];
+  }
+  const tets = [];
+  for (let t = 0; t < T; t++) {
+    if (!alive[t]) continue;
+    const a = V[4*t], b = V[4*t+1], c = V[4*t+2], d = V[4*t+3];
+    if (a >= n || b >= n || c >= n || d >= n) continue;
+    tets.push([a, b, c, d].sort((x, y) => x - y));
+  }
+  return tets;
+}
+
+// 3D alpha complex restricted to simplices that appear by radius maxR.
+// Uses lower bounds to skip work: a triangle's alpha value is at least its circumradius^2, an edge's at least (length/2)^2,
+// so larger simplices never enter the truncated filtration and are not built.
+function alphaTrunc3(P, n, maxR) {
+  const m2 = maxR * maxR, K = n + 1;
+  const tops = delaunay3fast(P, n);
+  const T = tops.length, tetF = new Float64Array(T);
+  for (let t = 0; t < T; t++) { const v = tops[t]; tetF[t] = PH.circumsphere(P, v[0], v[1], v[2], v[3])[3]; }
+  const d2 = (a, b) => { const x = P[3*a]-P[3*b], y = P[3*a+1]-P[3*b+1], z = P[3*a+2]-P[3*b+2]; return x*x+y*y+z*z; };
+  function triCirc(a, b, c) {
+    const ax = P[3*a], ay = P[3*a+1], az = P[3*a+2];
+    const ux = P[3*b]-ax, uy = P[3*b+1]-ay, uz = P[3*b+2]-az, vx = P[3*c]-ax, vy = P[3*c+1]-ay, vz = P[3*c+2]-az;
+    const uu = ux*ux+uy*uy+uz*uz, vv = vx*vx+vy*vy+vz*vz, uv = ux*vx+uy*vy+uz*vz, den = 2 * (uu * vv - uv * uv);
+    const s = vv * (uu - uv) / den, t = uu * (vv - uv) / den, x = s*ux + t*vx, y = s*uy + t*vy, z = s*uz + t*vz;
+    return [ax + x, ay + y, az + z, x*x + y*y + z*z];
+  }
+  const inBall = (c, w) => { const x = P[3*w]-c[0], y = P[3*w+1]-c[1], z = P[3*w+2]-c[2]; return x*x+y*y+z*z < c[3] * (1 - 1e-12); };
+  // triangles: keep those whose circumradius fits; record their coface tets
+  const triMap = new Map(), tris = [], triCof = [], triCC = [];
+  for (let t = 0; t < T; t++) {
+    const v = tops[t];
+    for (let i = 0; i < 4; i++) {
+      const f = v.filter((_, j) => j !== i); // sorted
+      const key = (f[0] * K + f[1]) * K + f[2];
+      let id = triMap.get(key);
+      if (id === undefined) {
+        const cc = triCirc(f[0], f[1], f[2]);
+        if (cc[3] > m2) { triMap.set(key, -1); continue; }
+        id = tris.length; triMap.set(key, id); tris.push(f); triCof.push([]); triCC.push(cc);
+      }
+      if (id >= 0) triCof[id].push([v[i], t]);
+    }
+  }
+  const triF = new Float64Array(tris.length);
+  for (let i = 0; i < tris.length; i++) {
+    let att = false, mn = Infinity;
+    for (const [w, t] of triCof[i]) { if (inBall(triCC[i], w)) att = true; if (tetF[t] < mn) mn = tetF[t]; }
+    triF[i] = att ? mn : triCC[i][3];
+  }
+  // edges: keep short ones; the star vertices (all vertices of tets containing the edge) decide attachment
+  const edgeMap = new Map(), edges = [], star = [];
+  const EP = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+  for (let t = 0; t < T; t++) {
+    const v = tops[t];
+    for (const [i, j] of EP) {
+      const a = v[i], b = v[j], key = a * K + b;
+      let id = edgeMap.get(key);
+      if (id === undefined) {
+        if (d2(a, b) / 4 > m2) { edgeMap.set(key, -1); continue; }
+        id = edges.length; edgeMap.set(key, id); edges.push([a, b]); star.push([]);
+      }
+      if (id >= 0) for (let q = 0; q < 4; q++) if (q !== i && q !== j) star[id].push(v[q]);
+    }
+  }
+  // smallest kept coface triangle value per edge
+  const edgeMinTri = new Float64Array(edges.length).fill(Infinity);
+  for (let i = 0; i < tris.length; i++) {
+    const [a, b, c] = tris[i];
+    for (const [x, y] of [[a, b], [a, c], [b, c]]) { const id = edgeMap.get(x * K + y); if (id >= 0 && triF[i] < edgeMinTri[id]) edgeMinTri[id] = triF[i]; }
+  }
+  const outE = [], outEF = [];
+  for (let e = 0; e < edges.length; e++) {
+    const [a, b] = edges[e];
+    const c = [(P[3*a]+P[3*b])/2, (P[3*a+1]+P[3*b+1])/2, (P[3*a+2]+P[3*b+2])/2, d2(a, b) / 4];
+    let att = false; for (const w of star[e]) if (inBall(c, w)) { att = true; break; }
+    const f = att ? edgeMinTri[e] : c[3];
+    if (f <= m2) { outE.push(edges[e]); outEF.push(f); }
+  }
+  const outT = [], outTF = [];
+  for (let i = 0; i < tris.length; i++) if (triF[i] <= m2) { outT.push(tris[i]); outTF.push(triF[i]); }
+  return { tops, tetF, tris: outT, triF: outTF, edges: outE, edgeF: outEF, dim: 3 };
+}
+
+// k nearest neighbours on a uniform grid, searching rings of cells outward until the k-th distance is certain
+function knnOf() {
+  if (C.knn) return C.knn;
+  const { P, n, dim } = C, K = Math.min(KMAX, n - 1);
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < n; i++) for (let d = 0; d < dim; d++) { const v = P[3 * i + d]; if (v < mn[d]) mn[d] = v; if (v > mx[d]) mx[d] = v; }
+  let vol = 1; for (let d = 0; d < dim; d++) vol *= Math.max(mx[d] - mn[d], 1e-12);
+  const h = Math.pow(vol * 2 / n, 1 / dim) || 1;
+  const g = [1, 1, 1];
+  for (let d = 0; d < dim; d++) g[d] = Math.max(1, Math.min(dim === 2 ? 2048 : 128, Math.ceil((mx[d] - mn[d]) / h)));
+  const cellOf = i => {
+    let c = 0;
+    for (let d = dim - 1; d >= 0; d--) c = c * g[d] + Math.min(g[d] - 1, Math.floor((P[3 * i + d] - mn[d]) / h));
+    return c;
+  };
+  const NC = g[0] * g[1] * g[2], start = new Int32Array(NC + 1), cell = new Int32Array(n);
+  for (let i = 0; i < n; i++) { cell[i] = cellOf(i); start[cell[i] + 1]++; }
+  for (let c = 0; c < NC; c++) start[c + 1] += start[c];
+  const fill = start.slice(0, NC), items = new Int32Array(n);
+  for (let i = 0; i < n; i++) items[fill[cell[i]]++] = i;
+
+  const idx = new Int32Array(n * K), dst = new Float64Array(n * K);
+  const bd = new Float64Array(K), bi = new Int32Array(K);
+  const maxR = Math.max(g[0], g[1], g[2]);
+  for (let i = 0; i < n; i++) {
+    bd.fill(Infinity); bi.fill(-1);
+    const xi = P[3 * i], yi = P[3 * i + 1], zi = P[3 * i + 2];
+    const ci = [0, 0, 0];
+    let c = cell[i]; for (let d = 0; d < dim; d++) { ci[d] = c % g[d]; c = (c - ci[d]) / g[d]; }
+    for (let r = 0; r <= maxR; r++) {
+      const z0 = dim === 3 ? -r : 0, z1 = dim === 3 ? r : 0;
+      for (let dz = z0; dz <= z1; dz++) {
+        const cz = ci[2] + dz; if (cz < 0 || cz >= g[2]) continue;
+        for (let dy = -r; dy <= r; dy++) {
+          const cy = ci[1] + dy; if (cy < 0 || cy >= g[1]) continue;
+          const onShell = Math.abs(dz) === r || Math.abs(dy) === r;
+          for (let dx = -r; dx <= r; dx += (onShell ? 1 : 2 * r || 1)) {
+            const cx = ci[0] + dx; if (cx < 0 || cx >= g[0]) continue;
+            const cc = (cz * g[1] + cy) * g[0] + cx;
+            for (let t = start[cc]; t < start[cc + 1]; t++) {
+              const j = items[t]; if (j === i) continue;
+              const ax = P[3 * j] - xi, ay = P[3 * j + 1] - yi, az = P[3 * j + 2] - zi, dd = ax * ax + ay * ay + az * az;
+              if (dd >= bd[K - 1]) continue;
+              let q = K - 1; while (q > 0 && bd[q - 1] > dd) { bd[q] = bd[q - 1]; bi[q] = bi[q - 1]; q--; }
+              bd[q] = dd; bi[q] = j;
+            }
+            if (r === 0) break;
+          }
+        }
+      }
+      // every cell in ring r+1 is at least r*h away from point i
+      if (bd[K - 1] <= (r * h) * (r * h)) break;
+    }
+    for (let q = 0; q < K; q++) { idx[i * K + q] = bi[q]; dst[i * K + q] = Math.sqrt(bd[q]); }
+  }
+  return (C.knn = { K, idx, dst });
+}
+
+function values(q) {
+  const n = C.n, out = [];
+  let cut = 0;
+  if (q.fn === 'h1') {
+    const A = alphaOf();
+    for (const b of A.bars1) { if (b[1] === Infinity) { cut++; continue; } if (b[0] > 0 && b[1] / b[0] > 1 + 1e-9) out.push(b[1] / b[0]); }
+  } else if (q.fn === 'cluster') {
+    const A = alphaOf();
+    let alive = 0;
+    for (const b of PH.clusterH0(n, A.eu, A.ev, A.ew, q.kc)) { if (b[1] === Infinity) { alive++; continue; } if (b[0] > 0 && b[1] / b[0] > 1 + 1e-9) out.push(b[1] / b[0]); }
+    cut = Math.max(0, alive - 1); // the last surviving cluster never dies, even without the cut-off
+  } else if (q.fn === 'knn') {
+    const { K, idx } = knnOf(), k = Math.min(q.kk, K);
+    const indeg = new Int32Array(n), mut = new Int32Array(n);
+    for (let i = 0; i < n; i++) for (let a = 0; a < k; a++) {
+      const j = idx[i * K + a]; indeg[j]++;
+      for (let r = 0; r < k; r++) if (idx[j * K + r] === i) { mut[i]++; break; }
+    }
+    for (let i = 0; i < n; i++) out.push(q.graph === 'in' ? indeg[i] : q.graph === 'mut' ? mut[i] : k + indeg[i] - mut[i]);
+  } else {
+    const { K, dst } = knnOf(), a = Math.min(q.ri, K) - 1, b = Math.min(q.rj, K) - 1;
+    for (let i = 0; i < n; i++) { const den = dst[i * K + b]; if (den > 0) out.push(dst[i * K + a] / den); }
+  }
+  const vals = Float64Array.from(out).sort();
+  return { vals, cut, maxR: C.maxR || 0 };
+}
+
+self.onmessage = e => {
+  const m = e.data;
+  try {
+    if (m.ver !== C.ver) { C.ver = m.ver; C.n = m.n; C.dim = m.dim; C.P = mortonSort(m.P, m.n); C.alpha = null; C.knn = null; C.maxR = 0; }
+    const r = values(m.q);
+    self.postMessage({ id: m.id, vals: r.vals, cut: r.cut, maxR: r.maxR }, [r.vals.buffer]);
+  } catch (err) {
+    self.postMessage({ id: m.id, error: String(err && err.message || err) });
+  }
+};
+</script>
+<script>
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const KMAX = 20; // nearest-neighbour lists cover k, i, j <= 20
+const ANIM_MS = 720;
+
+const DISTS = {
+  // dimension = intrinsic dimension; the sphere and torus are 2D surfaces sampled in 3D space
+  2: [['box', 'Uniform · unit square'], ['annulus', 'Uniform · annulus'], ['normal', 'Normal'], ['exp', 'Exponential radius'], ['beta', 'Beta radius'], ['sphere', 'Uniform · sphere (in ℝ³)'], ['torus', 'Uniform · torus (in ℝ³)']],
+  3: [['box', 'Uniform · unit cube'], ['annulus', 'Uniform · spherical shell'], ['normal', 'Normal']],
+};
+const PARAMS = { // shape parameters shown per distribution: [key, label, min, max, step] (the text box accepts up to TEXTMAX)
+  annulus: [['annIn', 'Inner radius', 0, 0.95, 0.05]],
+  beta: [['betaA', 'Beta a', 0.1, 8, 0.1], ['betaB', 'b', 0.1, 8, 0.1]],
+  torus: [['torr', 'Tube radius r / R', 0.05, 0.95, 0.05]],
+  normal: [['sx', 'σ₁', 0.05, 3, 0.05], ['sy', 'σ₂', 0.05, 3, 0.05], ['sz', 'σ₃', 0.05, 3, 0.05]],
+};
+const TEXTMAX = { annIn: 0.999, betaA: 100, betaB: 100, torr: 0.999, sx: 100, sy: 100, sz: 100 };
+const TEXTMIN = { betaA: 0.01, betaB: 0.01, sx: 0.001, sy: 0.001, sz: 0.001 };
+const NMAX = 100000;
+const FN = {
+  h1: { noun: 'cycles', xlab: () => 'death / birth', note: () => '<b>H₁ persistence.</b> Grow a ball around every point (alpha / Čech filtration). Each loop that forms has a birth radius and a death radius; the ratio death / birth measures how prominent the loop is.' },
+  cluster: { noun: 'clusters', xlab: () => 'death / birth', note: () => `<b>Cluster persistence (k = ${S.kc}).</b> As the balls grow, a connected component counts as a cluster once it holds at least k points. Its bar runs from that moment until it merges into an older cluster (Bobrowski &amp; Skraba, 2023). Plotted: death / birth.` },
+  knn: { noun: 'vertices', xlab: () => 'degree', note: () => `<b>k-NN graph (k = ${S.kk}).</b> Each point picks its k nearest neighbours. ${S.graph === 'sym' ? 'Either: two points are joined if at least one picks the other.' : S.graph === 'mut' ? 'Mutual: two points are joined only if each picks the other.' : 'In-degree: how many points pick this one.'} Plotted: the degree of every vertex.` },
+  ratio: { noun: 'points', xlab: () => `R${sub(S.ri)} / R${sub(S.rj)}`, note: () => `<b>Nearest-neighbour ratio.</b> R${sub(S.ri)}(x) is the distance from a point x to its ${ord(S.ri)} nearest neighbour in the same sample. Plotted: R${sub(S.ri)} / R${sub(S.rj)} for every point.` },
+};
+function sub(n) { return String(n).split('').map(c => '₀₁₂₃₄₅₆₇₈₉'[+c]).join(''); }
+function ord(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+const S = {
+  n: 2500, seed: 1,
+  sm: [
+    { dim: 2, dist: 'box', opt: { annIn: 0.5, betaA: 0.1, betaB: 0.1, torr: 0.35, sx: 1, sy: 0.5, sz: 1 } },
+    { dim: 2, dist: 'torus', opt: { annIn: 0.5, betaA: 0.1, betaB: 0.1, torr: 0.35, sx: 1, sy: 0.5, sz: 1 } },
+    { dim: 2, dist: 'beta', opt: { annIn: 0.5, betaA: 0.1, betaB: 0.1, torr: 0.35, sx: 1, sy: 0.5, sz: 1 } },
+  ],
+  fn: 'h1', kc: 3, kk: 3, graph: 'sym', ri: 2, rj: 1,
+  scale: 'loglog', kind: 'cdf', norm: false, yaw: 0.6, pitch: 0.95, hx: null,
+  mode: 'split',   // 'split' | 'overlay'
+  draw: 'normal',  // 'normal' | 'solo' (used during the overlay / split animation)
+};
+let SAMPLES = [], FRAME = [], VALS = null, PV = null, PS = 'lin', NORM = false, CUT = [0, 0, 0], MAXR = [0, 0, 0], DENS = null, YMAX = 1, VER = 0, AVAIL = { lin: true, log: true, loglog: true };
+const distName = s => DISTS[S.sm[s].dim].find(d => d[0] === S.sm[s].dist)[1] + (S.sm[s].dim === 3 ? ' (3D)' : '');
+
+// ---------- random ----------
+function rng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gauss(R) { let u = 0; while (u === 0) u = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * R()); }
+function gamma(a, R) {
+  if (a < 1) { let u = 0; while (u === 0) u = R(); return gamma(a + 1, R) * Math.pow(u, 1 / a); }
+  const d = a - 1 / 3, c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x, v; do { x = gauss(R); v = 1 + c * x; } while (v <= 0);
+    v = v * v * v; const u = R();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+function unitVec3(R) { let a, b, c, s; do { a = gauss(R); b = gauss(R); c = gauss(R); s = Math.hypot(a, b, c); } while (s < 1e-12); return [a / s, b / s, c / s]; }
+
+function sample(s) {
+  const { dist, opt: o } = S.sm[s], dim = (dist === 'sphere' || dist === 'torus') ? 3 : S.sm[s].dim, n = S.n, R = rng((S.seed * 7919 + s * 104729 + 17) >>> 0), P = new Float64Array(3 * n);
+  for (let i = 0; i < n; i++) {
+    let x = 0, y = 0, z = 0;
+    if (dim === 2) {
+      let r; const t = 2 * Math.PI * R();
+      switch (dist) {
+        case 'box': x = R(); y = R(); break;
+        case 'normal': x = o.sx * gauss(R); y = o.sy * gauss(R); break;
+        case 'annulus': r = Math.sqrt(R() * (1 - o.annIn * o.annIn) + o.annIn * o.annIn); x = r * Math.cos(t); y = r * Math.sin(t); break;
+        case 'exp': { let u = 0; while (u === 0) u = R(); r = -Math.log(u); x = r * Math.cos(t); y = r * Math.sin(t); break; }
+        case 'beta': { const ga = gamma(o.betaA, R), gb = gamma(o.betaB, R); r = ga / (ga + gb); x = r * Math.cos(t); y = r * Math.sin(t); break; }
+      }
+    } else {
+      switch (dist) {
+        case 'box': x = R(); y = R(); z = R(); break;
+        case 'normal': x = o.sx * gauss(R); y = o.sy * gauss(R); z = o.sz * gauss(R); break;
+        case 'annulus': { const a3 = Math.pow(o.annIn, 3), r = Math.cbrt(R() * (1 - a3) + a3), u = unitVec3(R); x = r * u[0]; y = r * u[1]; z = r * u[2]; break; }
+        case 'sphere': { const u = unitVec3(R); x = u[0]; y = u[1]; z = u[2]; break; }
+        case 'torus': {
+          const rr = o.torr; let th, ph;
+          do { th = 2 * Math.PI * R(); ph = 2 * Math.PI * R(); } while (R() > (1 + rr * Math.cos(th)) / (1 + rr));
+          x = (1 + rr * Math.cos(th)) * Math.cos(ph); y = (1 + rr * Math.cos(th)) * Math.sin(ph); z = rr * Math.sin(th); break;
+        }
+      }
+    }
+    P[3 * i] = x; P[3 * i + 1] = y; P[3 * i + 2] = z;
+  }
+  return { n, dim, dist, P, ver: ++VER };
+}
+
+// ---------- theme ----------
+let TH = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'panel', 'soft', 'line', 'fg', 'muted', 'faint', 's1', 's2', 's3']) TH[k] = cs.getPropertyValue('--' + k).trim();
+  TH.mono = cs.getPropertyValue('--mono').trim() || 'monospace';
+  TH.col = [TH.s1, TH.s2, TH.s3];
+}
+function rgba(hex, a) {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => parseInt(c + c, 16)) : [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+  return `rgba(${v[0]},${v[1]},${v[2]},${a})`;
+}
+function fit(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+// ---------- build cards ----------
+const NAMES = ['Sample 1', 'Sample 2', 'Sample 3'];
+function buildCards() {
+  const sm = $('samples'), cd = $('cdfs');
+  for (let s = 0; s < 3; s++) {
+    const params = Object.entries(PARAMS).flatMap(([d, list]) => list.map(([k, lab, mn, mx, st]) =>
+      `<div class="grp param" data-s="${s}" data-for="${d}" hidden><label class="lbl" for="${k}${s}N">${lab.startsWith('σ') ? `<span class="nt">${lab}</span>` : lab}</label><input type="range" id="${k}${s}" min="${mn}" max="${mx}" step="${st}" value="${S.sm[s].opt[k]}" aria-label="${lab}"><input type="number" class="num" id="${k}${s}N" min="${mn}" max="${mx}" step="${st}" value="${S.sm[s].opt[k]}"></div>`)).join('');
+    sm.insertAdjacentHTML('beforeend', `<article class="card">
+      <div class="card-head"><div class="ttl"><span class="dot" style="background:var(--s${s + 1})"></span>${NAMES[s]}</div><div class="meta" id="pm${s}"></div></div>
+      <div class="ctl">
+        <div class="seg" id="dim${s}"><button type="button" data-v="2" aria-pressed="${S.sm[s].dim === 2}">2D</button><button type="button" data-v="3" aria-pressed="${S.sm[s].dim === 3}">3D</button></div>
+        <select id="dist${s}" aria-label="Distribution for ${NAMES[s]}"></select>
+      </div>
+      <div class="ctl params" id="params${s}">${params}<span class="noparam" id="noparam${s}" hidden>No shape parameters</span></div>
+      <div class="cv pts" id="pw${s}"><canvas id="pc${s}"></canvas><div class="badge" id="rot${s}" hidden>Drag to rotate</div></div>
+    </article>`);
+    cd.insertAdjacentHTML('beforeend', `<article class="card" id="cd${s}">
+      <div class="card-head"><div class="ttl" id="ct${s}"><span class="dot" style="background:var(--s${s + 1})"></span><span>ECDF · ${NAMES[s]}</span></div><div class="meta" id="cm${s}"></div>${s === 1 ? '<div class="legend" id="legend"></div>' : ''}</div>
+      <div class="cv cdf" id="cw${s}"><canvas id="cc${s}"></canvas><div class="busy" id="cb${s}" hidden><span id="cbt${s}">Computing…</span></div></div>
+    </article>`);
+  }
+}
+
+// ---------- sample plots ----------
+function computeFrame(s) {
+  const { dim, dist, n, P } = SAMPLES[s];
+  if (dim === 2) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    if (dist === 'box') { x0 = y0 = 0; x1 = y1 = 1; }
+    else if (dist === 'annulus' || dist === 'beta') { x0 = y0 = -1; x1 = y1 = 1; }
+    else for (let i = 0; i < n; i++) { x0 = Math.min(x0, P[3 * i]); x1 = Math.max(x1, P[3 * i]); y0 = Math.min(y0, P[3 * i + 1]); y1 = Math.max(y1, P[3 * i + 1]); }
+    FRAME[s] = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, half: Math.max(x1 - x0, y1 - y0) / 2 || 1 };
+  } else {
+    const c = dist === 'box' ? [0.5, 0.5, 0.5] : [0, 0, 0];
+    let rad = 0;
+    if (dist === 'box') rad = Math.sqrt(3) / 2;
+    else for (let i = 0; i < n; i++) rad = Math.max(rad, Math.hypot(P[3 * i] - c[0], P[3 * i + 1] - c[1], P[3 * i + 2] - c[2]));
+    FRAME[s] = { c, rad: rad || 1 };
+  }
+}
+function proj(x, y, z) {
+  const cy = Math.cos(S.yaw), sy = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
+  const x1 = cy * x - sy * y, y1 = sy * x + cy * y;
+  return [x1, z * cp - y1 * sp, y1 * cp + z * sp]; // screen x, screen up, depth (larger = farther)
+}
+function drawSample(s) {
+  const cv = $('pc' + s); if (!cv.clientWidth || !SAMPLES[s]) return;
+  const { ctx, w, h } = fit(cv), { n, P, dim, dist } = SAMPLES[s], col = TH.col[s], F = FRAME[s], opt = S.sm[s].opt;
+  const base = Math.max(0.9, Math.min(2.8, 2.6 * Math.sqrt(400 / n)));
+  if (dim === 2) {
+    const sc = Math.min(w, h) * 0.45 / F.half, X = x => w / 2 + (x - F.cx) * sc, Y = y => h / 2 - (y - F.cy) * sc;
+    ctx.strokeStyle = TH.line; ctx.lineWidth = 1;
+    if (dist === 'box') ctx.strokeRect(X(0), Y(1), sc, sc);
+    if (dist === 'annulus') { ctx.beginPath(); ctx.arc(X(0), Y(0), sc, 0, 7); ctx.stroke(); if (opt.annIn > 0) { ctx.beginPath(); ctx.arc(X(0), Y(0), sc * opt.annIn, 0, 7); ctx.stroke(); } }
+    ctx.fillStyle = col;
+    if (n > 4000) { const r = Math.max(0.6, base * 0.8); for (let i = 0; i < n; i++) ctx.fillRect(X(P[3 * i]) - r, Y(P[3 * i + 1]) - r, 2 * r, 2 * r); }
+    else for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(X(P[3 * i]), Y(P[3 * i + 1]), base, 0, 6.2832); ctx.fill(); }
+  } else {
+    const { c, rad } = F, sc = Math.min(w, h) * 0.44 / rad;
+    if (dist === 'box') {
+      const V = []; for (let q = 0; q < 8; q++) V.push(proj((q & 1) - 0.5, ((q >> 1) & 1) - 0.5, ((q >> 2) & 1) - 0.5));
+      ctx.strokeStyle = TH.line; ctx.lineWidth = 1; ctx.beginPath();
+      for (let a = 0; a < 8; a++) for (const bit of [1, 2, 4]) if (!(a & bit)) { const b = a | bit; ctx.moveTo(w / 2 + V[a][0] * sc, h / 2 - V[a][1] * sc); ctx.lineTo(w / 2 + V[b][0] * sc, h / 2 - V[b][1] * sc); }
+      ctx.stroke();
+    }
+    const Q = new Float64Array(3 * n), ordr = new Int32Array(n);
+    for (let i = 0; i < n; i++) { const p = proj(P[3 * i] - c[0], P[3 * i + 1] - c[1], P[3 * i + 2] - c[2]); Q[3 * i] = p[0]; Q[3 * i + 1] = p[1]; Q[3 * i + 2] = p[2]; ordr[i] = i; }
+    ordr.sort((a, b) => Q[3 * b + 2] - Q[3 * a + 2]);
+    const shades = Array.from({ length: 16 }, (_, k) => rgba(col, 0.25 + 0.75 * k / 15));
+    for (const i of ordr) {
+      const t = Math.max(0, Math.min(1, 0.5 - Q[3 * i + 2] / (2 * rad))); // 1 = nearest
+      ctx.fillStyle = shades[Math.round(t * 15)];
+      const rr = base * (0.75 + 0.45 * t), px = w / 2 + Q[3 * i] * sc, py = h / 2 - Q[3 * i + 1] * sc;
+      if (n > 4000) ctx.fillRect(px - rr * 0.8, py - rr * 0.8, rr * 1.6, rr * 1.6);
+      else { ctx.beginPath(); ctx.arc(px, py, rr, 0, 6.2832); ctx.fill(); }
+    }
+  }
+  $('pm' + s).textContent = `n = ${n.toLocaleString('en-GB')}`;
+}
+function drawSamples() { for (let s = 0; s < 3; s++) drawSample(s); }
+
+// ---------- ECDF plots ----------
+const TF = { lin: x => x, log: x => Math.log(x), loglog: x => Math.log(Math.log(x)) };
+const TFI = { lin: t => t, log: t => Math.exp(t), loglog: t => Math.exp(Math.exp(t)) };
+function niceTicks(lo, hi, count, integer) {
+  const raw = (hi - lo) / Math.max(1, count), p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p;
+  let step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  if (integer) step = Math.max(1, Math.round(step));
+  const t = []; for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9 * step; v += step) t.push(+v.toPrecision(10));
+  return t;
+}
+function curvedTicks(lo, hi, px, T, tw) {
+  // candidate "round" numbers ranked by niceness; greedily keep those whose labels do not collide
+  const cand = [];
+  const e0 = Math.floor(Math.log10(lo)) - 1, e1 = Math.ceil(Math.log10(hi)) + 1;
+  const tiers = [[1], [2, 5], [1.5, 3], [1.2, 4, 7], [1.1, 1.3, 1.4, 1.6, 1.8, 2.5, 6, 8, 9]];
+  tiers.forEach((ms, pr) => { for (let e = e0; e <= e1; e++) for (const m of ms) cand.push([+(m * Math.pow(10, e)).toPrecision(6), pr]); });
+  for (let d = 1; d <= 6; d++) [[1, 1], [2, 2], [5, 2]].forEach(([m, pr]) => cand.push([+(1 + m * Math.pow(10, -d)).toPrecision(8), pr + 1]));
+  const t0 = T(lo), t1 = T(hi), pos = v => (T(v) - t0) / (t1 - t0) * px;
+  const ok = cand.filter(([v]) => v >= lo && v <= hi && isFinite(T(v))).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  const chosen = [];
+  for (const [v] of ok) if (!chosen.includes(v) && chosen.every(u => Math.abs(pos(u) - pos(v)) >= (tw(u) + tw(v)) / 2 + 14)) chosen.push(v);
+  return chosen.sort((a, b) => a - b);
+}
+function fmtTick(v) {
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  if (a >= 1e4 || a < 1e-3) { const e = Math.floor(Math.log10(a)), m = +(v / Math.pow(10, e)).toPrecision(2); return (m === 1 ? '' : m + '·') + '10' + String(e).split('').map(c => c === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]).join(''); }
+  return String(+v.toPrecision(9));
+}
+function fmtVal(v) {
+  if (Math.abs(v) >= 1e4) return v.toExponential(2);
+  const d = Math.abs(v - 1); // keep enough digits to separate values just above 1
+  const p = d > 0 && d < 0.01 ? Math.min(12, 3 - Math.floor(Math.log10(d))) : 4;
+  return String(+v.toPrecision(p));
+}
+function upperBound(arr, x) { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] <= x) lo = m + 1; else hi = m; } return lo; }
+
+let XR = null; // shared x-range in transformed units
+// number of H1 "signal" cycles that come from the shape itself (excluded when choosing the x-range)
+function signalCount(s) {
+  if (S.fn !== 'h1') return 0;
+  const { dim, dist, opt } = S.sm[s];
+  if (dist === 'torus') return 2;
+  if (dist === 'annulus' && dim === 2 && opt.annIn > 0) return 1;
+  return 0;
+}
+function computeRange() {
+  const T = TF[PS];
+  let lo = Infinity, hi = -Infinity;
+  for (let s = 0; s < 3; s++) {
+    const v = PV[s], top = v.length - 1 - Math.max(0, signalCount(s) - CUT[s]); // signal loops already lost to the cut-off are not in v
+    if (top < 0) continue;
+    if (discrete()) { // leave half a unit around the integer values so the end bars are not clipped
+      const a = v[0], b = v[top], sc = PS;
+      lo = Math.min(lo, T(sc === 'lin' ? a - 0.5 : sc === 'log' ? Math.max(a - 0.5, a / 2) : Math.max(a - 0.5, (1 + a) / 2)));
+      hi = Math.max(hi, T(b + 0.5));
+    } else { lo = Math.min(lo, T(v[0])); hi = Math.max(hi, T(v[top])); }
+  }
+  if (!isFinite(lo)) { XR = null; return; }
+  if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+  const pad = discrete() ? 0 : (hi - lo) * 0.04;
+  XR = [lo - pad, hi + pad];
+  computeDensity();
+}
+const discrete = () => S.fn === 'knn' && !NORM;
+const kindLabel = () => S.kind === 'cdf' ? 'ECDF' : discrete() ? 'PMF' : 'PDF';
+function setTitles() { for (let s = 0; s < 3; s++) if (!(s === 1 && S.mode === 'overlay')) $('ct' + s).lastChild.textContent = kindLabel() + ' · ' + NAMES[s]; }
+// density of the plotted variable t = T(x) (so it integrates to 1 along the axis as drawn); PMF for integer degrees
+function computeDensity() {
+  DENS = null; YMAX = 1;
+  if (S.kind !== 'pdf' || !XR) return;
+  const T = TF[PS];
+  if (discrete()) {
+    DENS = PV.map(v => { const c = new Map(); for (const x of v) c.set(x, (c.get(x) || 0) + 1); const out = []; for (const [k, n] of c) out.push([k, n / v.length]); return out.sort((a, b) => a[0] - b[0]); });
+  } else {
+    const G = 480, t0 = XR[0], dx = (XR[1] - XR[0]) / G;
+    DENS = PV.map(v => {
+      const m = v.length, f = new Float64Array(G); if (!m) return f;
+      const t = Array.from(v, T);
+      let mu = 0; for (const a of t) mu += a; mu /= m;
+      let sd = 0; for (const a of t) sd += (a - mu) * (a - mu); sd = Math.sqrt(sd / Math.max(1, m - 1));
+      const iqr = t[Math.floor(0.75 * (m - 1))] - t[Math.floor(0.25 * (m - 1))];
+      const sig = Math.min(sd, iqr / 1.34) || sd || (XR[1] - XR[0]) / 50;
+      const bw = Math.max(0.9 * sig * Math.pow(m, -0.2), 1.5 * dx);
+      const bins = new Float64Array(G);
+      for (const a of t) { const i = Math.floor((a - t0) / dx); if (i >= 0 && i < G) bins[i]++; }
+      const kr = Math.ceil(4 * bw / dx), ker = new Float64Array(2 * kr + 1);
+      for (let j = -kr; j <= kr; j++) ker[j + kr] = Math.exp(-0.5 * (j * dx / bw) ** 2) / (bw * Math.sqrt(2 * Math.PI));
+      for (let i = 0; i < G; i++) if (bins[i]) { const c = bins[i] / m; for (let j = -kr; j <= kr; j++) { const q = i + j; if (q >= 0 && q < G) f[q] += c * ker[j + kr]; } }
+      return f;
+    });
+  }
+  let mx = 0;
+  for (const d of DENS) for (const e of d) { const y = discrete() ? e[1] : e; if (y > mx) mx = y; }
+  YMAX = (mx || 1) * 1.08;
+}
+function densAt(o, x) {
+  if (!DENS) return 0;
+  if (discrete()) { const k = Math.round(x), e = DENS[o].find(e => e[0] === k); return e ? e[1] : 0; }
+  const G = DENS[o].length, u = (TF[PS](x) - XR[0]) / (XR[1] - XR[0]) * G - 0.5, i = Math.floor(u), a = u - i;
+  const g = j => DENS[o][Math.max(0, Math.min(G - 1, j))];
+  return g(i) * (1 - a) + g(i + 1) * a;
+}
+const PAD = { l: 40, r: 14, t: 12, b: 40 };
+// what each canvas shows:
+//   split:   own curve bold + the other two faint
+//   solo:    during the animation — the centre plot keeps its axes, the two moving plots draw only their curve
+//   overlay: centre plot shows all three curves bold
+function drawCDF(s) {
+  const cv = $('cc' + s); if (!cv.clientWidth) return;
+  const { ctx, w, h } = fit(cv);
+  const L = PAD.l, R = w - PAD.r, Tp = PAD.t, B = h - PAD.b;
+  const bare = S.draw === 'solo' && s !== 1;
+  const all = S.mode === 'overlay' && S.draw === 'normal';
+  ctx.font = `11px ${TH.mono}`;
+  if (!VALS || !XR) {
+    if (bare) return;
+    ctx.fillStyle = TH.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(VALS ? 'No values for this choice' : '', w / 2, h / 2); return;
+  }
+  const scale = PS, T = TF[scale], TI = TFI[scale];
+  const X = v => L + (T(v) - XR[0]) / (XR[1] - XR[0]) * (R - L);
+  const pdf = S.kind === 'pdf' && DENS, ymax = pdf ? YMAX : 1;
+  const Y = p => Tp + (1 - p / ymax) * (B - Tp);
+  if (!bare) {
+    ctx.lineWidth = 1; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    const yt = pdf ? niceTicks(0, ymax / 1.08 * 1.0001, 4) : [0, 0.25, 0.5, 0.75, 1];
+    for (const p of yt) {
+      if (p > ymax) continue;
+      ctx.strokeStyle = p === 0 ? TH.faint : TH.soft; ctx.beginPath(); ctx.moveTo(L, Math.round(Y(p)) + 0.5); ctx.lineTo(R, Math.round(Y(p)) + 0.5); ctx.stroke();
+      ctx.fillStyle = TH.muted; ctx.fillText(p === 0 ? '0' : String(+p.toPrecision(3)).replace(/^0\./, '.'), L - 8, Y(p));
+    }
+    const lo = TI(XR[0]), hi = TI(XR[1]);
+    const ticks = scale === 'lin' ? niceTicks(lo, hi, Math.max(2, Math.floor((R - L) / 70)), discrete()) : curvedTicks(lo, hi, R - L, T, v => ctx.measureText(fmtTick(v)).width);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const v of ticks) {
+      const x = Math.round(X(v)) + 0.5; if (x < L - 1 || x > R + 1) continue;
+      ctx.strokeStyle = TH.soft; ctx.beginPath(); ctx.moveTo(x, Tp); ctx.lineTo(x, B); ctx.stroke();
+      ctx.strokeStyle = TH.faint; ctx.beginPath(); ctx.moveTo(x, B); ctx.lineTo(x, B + 4); ctx.stroke();
+      ctx.fillStyle = TH.muted; ctx.fillText(fmtTick(v), x, B + 7);
+    }
+    ctx.fillStyle = TH.muted; ctx.font = `500 11.5px ${TH.mono}`;
+    const xl = NORM ? `(log log x − μ) / σ,  x = ${FN[S.fn].xlab()}` : FN[S.fn].xlab() + (scale === 'log' ? '  ·  log scale' : scale === 'loglog' ? '  ·  log-log scale' : '');
+    ctx.fillText(pdf ? (discrete() ? 'PMF of ' : 'density of ') + xl : xl, (L + R) / 2, h - 15);
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(L, Tp - 2, R - L, B - Tp + 4); ctx.clip();
+  const path = v => { // ECDF steps, thinned to one vertex pair per pixel column
+    const m = v.length; ctx.beginPath(); ctx.moveTo(L, Y(0));
+    let lastX = -1e9, lastY = Y(0);
+    for (let i = 0; i < m; i++) {
+      const x = X(v[i]);
+      if (x - lastX >= 0.5 || i === m - 1) { ctx.lineTo(x, lastY); ctx.lineTo(x, Y((i + 1) / m)); lastX = x; }
+      lastY = Y((i + 1) / m);
+    }
+    ctx.lineTo(R, Y(1));
+  };
+  const dpath = o => { // KDE curve
+    const f = DENS[o], G = f.length; ctx.beginPath();
+    for (let i = 0; i < G; i++) { const x = L + (i + 0.5) / G * (R - L); i ? ctx.lineTo(x, Y(f[i])) : ctx.moveTo(x, Y(f[i])); }
+  };
+  const fillOK = S.mode === 'split' && S.draw === 'normal';
+  const bold = o => {
+    const v = PV[o]; if (!v.length) return;
+    if (pdf && discrete()) { // PMF bars, side by side when the three share a plot
+      const pts = DENS[o], keys = [...new Set(DENS.flatMap(d => d.map(e => e[0])))].sort((a, b) => a - b);
+      let gap = R - L; for (let i = 1; i < keys.length; i++) gap = Math.min(gap, X(keys[i]) - X(keys[i - 1]));
+      const dodge = S.mode === 'overlay', bw = Math.max(2, Math.min(dodge ? gap * 0.8 / 3 : gap * 0.7, 22)), off = dodge ? (o - 1) * bw : 0;
+      ctx.fillStyle = rgba(TH.col[o], 0.85);
+      for (const [k, p] of pts) { const x = X(k) + off - bw / 2; ctx.fillRect(x, Y(p), bw, Y(0) - Y(p)); }
+      return;
+    }
+    if (pdf) {
+      if (fillOK) { dpath(o); ctx.lineTo(R, Y(0)); ctx.lineTo(L, Y(0)); ctx.closePath(); ctx.fillStyle = rgba(TH.col[o], 0.1); ctx.fill(); }
+      dpath(o); ctx.strokeStyle = TH.col[o]; ctx.lineWidth = 2; ctx.stroke(); return;
+    }
+    if (fillOK) { path(v); ctx.lineTo(R, Y(0)); ctx.closePath(); ctx.fillStyle = rgba(TH.col[o], 0.07); ctx.fill(); }
+    path(v); ctx.strokeStyle = TH.col[o]; ctx.lineWidth = 2; ctx.stroke();
+  };
+  ctx.lineJoin = 'round';
+  if (all) { for (let o = 0; o < 3; o++) bold(o); }
+  else {
+    bold(s);
+  }
+  ctx.restore();
+  // hover readout
+  if (S.hx != null && !bare && S.draw === 'normal') {
+    const x = X(S.hx), list = all ? [0, 1, 2] : [s];
+    ctx.strokeStyle = TH.faint; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, Tp); ctx.lineTo(Math.round(x) + 0.5, B); ctx.stroke(); ctx.setLineDash([]);
+    const rows = [pdf && discrete() ? `k = ${Math.round(S.hx)}` : NORM ? `z = ${S.hx.toFixed(3)}` : `x = ${fmtVal(S.hx)}`];
+    for (const o of list) {
+      const v = PV[o]; if (!v.length) continue;
+      const F = pdf ? densAt(o, S.hx) : upperBound(v, S.hx) / v.length;
+      const mx = pdf && discrete() ? X(Math.round(S.hx)) : x;
+      ctx.fillStyle = TH.panel; ctx.strokeStyle = TH.col[o]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(mx, Y(F), 4, 0, 6.2832); ctx.fill(); ctx.stroke();
+      rows.push([o, `${pdf ? (discrete() ? 'P' : 'f') : 'F'} = ${F.toFixed(3)}`]);
+    }
+    ctx.font = `500 11.5px ${TH.mono}`;
+    if (!all) { rows[0] = rows[0] + '   ' + (rows[1] ? rows[1][1] : ''); rows.length = 1; }
+    const lh = 17, tw = Math.max(...rows.map(r => ctx.measureText(typeof r === 'string' ? r : r[1]).width + (typeof r === 'string' ? 0 : 14)));
+    const bw = tw + 16, bh = rows.length * lh + 6;
+    ctx.fillStyle = rgba(TH.panel, 0.94); ctx.fillRect(L + 6, Tp + 4, bw, bh);
+    ctx.strokeStyle = TH.line; ctx.lineWidth = 1; ctx.strokeRect(L + 6.5, Tp + 4.5, bw - 1, bh - 1);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    rows.forEach((r, i) => {
+      const yy = Tp + 4 + 3 + lh * i + lh / 2;
+      if (typeof r === 'string') { ctx.fillStyle = TH.fg; ctx.fillText(r, L + 14, yy); }
+      else { ctx.fillStyle = TH.col[r[0]]; ctx.beginPath(); ctx.arc(L + 18, yy, 4, 0, 6.2832); ctx.fill(); ctx.fillStyle = TH.fg; ctx.fillText(r[1], L + 28, yy); }
+    });
+  }
+}
+function drawCDFs() { for (let s = 0; s < 3; s++) drawCDF(s); }
+function updateMeta() {
+  for (let s = 0; s < 3; s++) {
+    const v = VALS ? VALS[s] : null;
+    const cut = v && (S.fn === 'h1' || S.fn === 'cluster') && CUT[s] ? ` · ${CUT[s]} cut` : '';
+    $('cm' + s).textContent = !v ? '' : (v.length ? `${v.length.toLocaleString('en-GB')} ${FN[S.fn].noun} · median ${fmtVal(v[Math.floor((v.length - 1) / 2)])}` : `0 ${FN[S.fn].noun}`) + cut;
+    $('cm' + s).title = cut ? `Homology is computed only up to radius ${fmtVal(MAXR[s])} (5 × the largest nearest-neighbour distance). Features still alive there have no death value and are left out.` : '';
+  }
+  $('legend').innerHTML = [0, 1, 2].map(s => {
+    return `<span class="li" title="${NAMES[s]} · ${distName(s)}"><span class="dot" style="background:var(--s${s + 1})"></span><b>${s + 1}</b><span class="ln">${distName(s)}</span></span>`;
+  }).join('');
+}
+
+// ---------- scale availability ----------
+function updateScale() {
+  let mn = Infinity; if (VALS) for (const v of VALS) if (v.length) mn = Math.min(mn, v[0]);
+  AVAIL = { lin: true, log: mn > 0, loglog: mn > 1 };
+  S.scaleEff = AVAIL[S.scale] ? S.scale : (S.scale === 'loglog' && AVAIL.log ? 'log' : 'lin');
+  document.querySelectorAll('#segScale button').forEach(b => {
+    const v = b.dataset.v; b.disabled = !AVAIL[v];
+    b.title = AVAIL[v] ? '' : v === 'log' ? 'Needs every value above 0' : 'Needs every value above 1';
+    b.setAttribute('aria-pressed', String(v === S.scaleEff));
+  });
+  // optional normalisation on the log-log scale: z = (log log x - mean) / std, per sample
+  const nb = $('normIn');
+  nb.disabled = S.scaleEff !== 'loglog'; $('normWrap').classList.toggle('off', nb.disabled);
+  $('normWrap').title = nb.disabled ? 'Available on the log-log scale' : 'Shift and scale each sample to mean 0 and standard deviation 1 on the log-log scale';
+  NORM = !!(S.norm && S.scaleEff === 'loglog' && VALS);
+  PS = NORM ? 'lin' : S.scaleEff;
+  PV = !VALS ? null : !NORM ? VALS : VALS.map((v, s) => {
+    const t = Array.from(v, x => Math.log(Math.log(x)));
+    const k = t.length - Math.max(0, signalCount(s) - CUT[s]); // leave signal loops out of the mean and std
+    let mu = 0; for (let i = 0; i < k; i++) mu += t[i]; mu /= Math.max(1, k);
+    let sd = 0; for (let i = 0; i < k; i++) sd += (t[i] - mu) ** 2; sd = Math.sqrt(sd / Math.max(1, k - 1)) || 1;
+    return Float64Array.from(t, a => (a - mu) / sd);
+  });
+}
+
+// ---------- overlay / split animation ----------
+let animating = false;
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setOffsets() {
+  // layout positions (offsetLeft/Top ignore transforms, so this also works while a card is parked)
+  const c = $('cd1');
+  for (const s of [0, 2]) {
+    const el = $('cd' + s);
+    el.style.setProperty('--dx', (c.offsetLeft - el.offsetLeft) + 'px');
+    el.style.setProperty('--dy', (c.offsetTop - el.offsetTop) + 'px');
+  }
+}
+function setButton() {
+  const b = $('ovBtn'), ov = S.mode === 'overlay';
+  b.querySelector('span').textContent = ov ? 'Split' : 'Overlay';
+  b.setAttribute('aria-pressed', String(ov));
+  $('icoOverlay').hidden = ov; $('icoSplit').hidden = !ov;
+}
+function toOverlay() {
+  if (animating || S.mode === 'overlay') return;
+  animating = true; S.hx = null; S.mode = 'overlay'; setButton();
+  const wrap = $('cdfs'), outer = [$('cd0'), $('cd2')];
+  setOffsets();
+  S.draw = 'solo'; drawCDFs();
+  wrap.classList.toggle('instant', reduced());
+  requestAnimationFrame(() => { outer.forEach(el => el.classList.add('fly')); $('cd1').classList.add('hub'); });
+  setTimeout(() => {
+    outer.forEach(el => { el.classList.add('instant1'); el.classList.add('gone'); });
+    wrap.classList.add('overlay');
+    $('ct1').lastChild.textContent = kindLabel() + ' · all samples';
+    S.draw = 'normal'; drawCDFs();
+    requestAnimationFrame(() => wrap.classList.add('show-legend'));
+    animating = false;
+  }, reduced() ? 0 : ANIM_MS);
+}
+function toSplit() {
+  if (animating || S.mode === 'split') return;
+  animating = true; S.hx = null; S.mode = 'split'; setButton();
+  const wrap = $('cdfs'), outer = [$('cd0'), $('cd2')];
+  wrap.classList.remove('show-legend', 'overlay');
+  setTitles();
+  outer.forEach(el => el.classList.remove('gone'));
+  setOffsets(); // outer cards are back in the layout, still parked over the centre one
+  S.draw = 'solo'; drawCDFs();
+  wrap.classList.toggle('instant', reduced());
+  void wrap.offsetWidth;
+  requestAnimationFrame(() => {
+    outer.forEach(el => { el.classList.remove('instant1'); el.classList.remove('fly'); });
+    $('cd1').classList.remove('hub');
+  });
+  setTimeout(() => { S.draw = 'normal'; drawCDFs(); animating = false; }, reduced() ? 0 : ANIM_MS);
+}
+
+// ---------- orchestration (one Web Worker per sample) ----------
+let fnTimer = 0, WURL = null;
+const WK = [null, null, null], REQ = [0, 0, 0], KEY = ['', '', ''], BUSY = [false, false, false], T0 = [0, 0, 0], PEND = [null, null, null];
+function workerURL() {
+  if (!WURL) {
+    const src = ['dlSrc', 'engSrc', 'wkSrc'].map(id => $(id).textContent).join('\n;\n');
+    WURL = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  }
+  return WURL;
+}
+function getWorker(s) {
+  if (!WK[s]) {
+    WK[s] = new Worker(workerURL());
+    WK[s].onmessage = e => onResult(s, e.data);
+    WK[s].onerror = e => { e.preventDefault(); onResult(s, { id: REQ[s], error: e.message || 'worker error' }); };
+  }
+  return WK[s];
+}
+function fnKey() { return [S.fn, S.fn === 'cluster' ? S.kc : '', S.fn === 'knn' ? S.kk + S.graph : '', S.fn === 'ratio' ? S.ri + '/' + S.rj : ''].join('|'); }
+function request(s) {
+  const sm = SAMPLES[s], key = sm.ver + '#' + fnKey();
+  if (key === KEY[s]) return;          // already computed or in flight
+  if (BUSY[s]) { WK[s].terminate(); WK[s] = null; }  // drop the stale computation
+  KEY[s] = key; BUSY[s] = true; T0[s] = performance.now();
+  const id = ++REQ[s];
+  $('cb' + s).hidden = false; $('cbt' + s).textContent = 'Computing…';
+  getWorker(s).postMessage({ id, ver: sm.ver, n: sm.n, dim: sm.dim, P: sm.P, q: { fn: S.fn, kc: S.kc, kk: S.kk, graph: S.graph, ri: S.ri, rj: S.rj } });
+}
+function onResult(s, d) {
+  if (d.id !== REQ[s]) return;
+  BUSY[s] = false;
+  if (d.error) { KEY[s] = ''; $('cbt' + s).textContent = 'Could not compute: ' + d.error; return; }
+  PEND[s] = d; $('cb' + s).hidden = true;
+  if (!BUSY.some(Boolean)) {
+    VALS = PEND.map(r => r ? r.vals : new Float64Array(0));
+    CUT = PEND.map(r => r ? r.cut : 0); MAXR = PEND.map(r => r ? r.maxR : 0);
+    updateScale(); computeRange(); updateMeta(); drawCDFs();
+  }
+}
+setInterval(() => {
+  for (let s = 0; s < 3; s++) if (BUSY[s]) {
+    const t = (performance.now() - T0[s]) / 1000;
+    if (t > 1) $('cbt' + s).textContent = `Computing… ${Math.floor(t)} s`;
+  }
+}, 500);
+function resampleOne(s) {
+  SAMPLES[s] = sample(s); computeFrame(s); drawSample(s);
+}
+function resample(only) {
+  if (only == null) for (let s = 0; s < 3; s++) resampleOne(s); else resampleOne(only);
+  scheduleFn(140);
+}
+function scheduleFn(delay) {
+  clearTimeout(fnTimer);
+  fnTimer = setTimeout(runFn, delay);
+}
+function runFn() {
+  $('fnNote').innerHTML = FN[S.fn].note();
+  document.querySelector('#segKind button[data-v="pdf"]').textContent = discrete() ? 'PMF' : 'PDF';
+  setTitles();
+  for (let s = 0; s < 3; s++) request(s);
+}
+
+// ---------- controls ----------
+function seg(el, onPick) {
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    onPick(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v);
+  });
+}
+function fillDists(s) {
+  const sel = $('dist' + s), sm = S.sm[s]; sel.innerHTML = '';
+  for (const [v, l] of DISTS[sm.dim]) sel.insertAdjacentHTML('beforeend', `<option value="${v}">${l}</option>`);
+  if (!DISTS[sm.dim].some(d => d[0] === sm.dist)) sm.dist = 'box';
+  sel.value = sm.dist;
+  showParams(s);
+}
+function showParams(s) {
+  const sm = S.sm[s]; let any = false;
+  document.querySelectorAll(`.param[data-s="${s}"]`).forEach(el => {
+    const on = el.dataset.for === sm.dist && !(el.querySelector('[id^="sz"]') && sm.dim !== 3);
+    el.hidden = !on; any = any || on;
+  });
+  $('noparam' + s).hidden = any;
+  const amb3 = sm.dim === 3 || sm.dist === 'sphere' || sm.dist === 'torus';
+  $('rot' + s).hidden = !amb3;
+  $('pw' + s).classList.toggle('rot', amb3);
+}
+function showFnParams() { document.querySelectorAll('.fparam').forEach(el => el.hidden = el.dataset.for !== S.fn); }
+// a slider paired with a text box; the text box may go beyond the slider's range up to tmax
+function slider(id, apply, onChange, tmax, integer, tmin) {
+  const r = $(id), t = $(id + 'N'), lo = tmin != null ? tmin : +r.min, hi = tmax != null ? tmax : +r.max;
+  r.addEventListener('input', () => { t.value = r.value; apply(+r.value); onChange(); });
+  t.addEventListener('change', () => {
+    let v = +t.value; if (!isFinite(v) || t.value === '') v = +r.value;
+    v = Math.max(lo, Math.min(hi, integer ? Math.round(v) : v));
+    t.value = v; r.value = v; apply(v); onChange();
+  });
+}
+
+function init() {
+  readTheme(); buildCards();
+  for (let s = 0; s < 3; s++) {
+    seg($('dim' + s), v => { S.sm[s].dim = v; fillDists(s); resample(s); });
+    $('dist' + s).addEventListener('change', e => { S.sm[s].dist = e.target.value; showParams(s); resample(s); });
+    for (const list of Object.values(PARAMS)) for (const [k] of list) slider(k + s, v => S.sm[s].opt[k] = v, () => resample(s), TEXTMAX[k], false, TEXTMIN[k]);
+    fillDists(s);
+  }
+  $('nIn').addEventListener('change', e => { S.n = Math.max(10, Math.min(NMAX, Math.round(+e.target.value || 2500))); e.target.value = S.n; resample(); });
+  $('seedIn').addEventListener('change', e => { S.seed = Math.max(0, Math.floor(+e.target.value || 0)); e.target.value = S.seed; resample(); });
+  $('reseed').addEventListener('click', () => { S.seed = Math.floor(Math.random() * 999999); $('seedIn').value = S.seed; resample(); });
+
+  $('fnSel').addEventListener('change', e => { S.fn = e.target.value; showFnParams(); scheduleFn(10); });
+  slider('kc', v => S.kc = v, () => scheduleFn(120), 500, true);
+  slider('kk', v => S.kk = v, () => scheduleFn(60), 20, true);
+  slider('ri', v => S.ri = v, () => scheduleFn(60), 20, true);
+  slider('rj', v => S.rj = v, () => scheduleFn(60), 20, true);
+  seg($('segGraph'), v => { S.graph = v; scheduleFn(10); });
+  seg($('segScale'), v => { S.scale = v; updateScale(); computeRange(); drawCDFs(); });
+  $('normIn').addEventListener('change', e => { S.norm = e.target.checked; updateScale(); computeRange(); drawCDFs(); });
+  seg($('segKind'), v => { S.kind = v; setTitles(); computeDensity(); drawCDFs(); });
+  $('ovBtn').addEventListener('click', () => S.mode === 'overlay' ? toSplit() : toOverlay());
+
+  // 3D rotation: dragging any 3D sample rotates all 3D samples together
+  for (let s = 0; s < 3; s++) {
+    const el = $('pw' + s); let drag = null;
+    el.addEventListener('pointerdown', e => { if (!SAMPLES[s] || SAMPLES[s].dim !== 3) return; drag = [e.clientX, e.clientY]; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointermove', e => {
+      if (!drag) return;
+      S.yaw += (e.clientX - drag[0]) * 0.01; S.pitch = Math.max(-1.45, Math.min(1.45, S.pitch + (e.clientY - drag[1]) * 0.01));
+      drag = [e.clientX, e.clientY];
+      for (let o = 0; o < 3; o++) if (SAMPLES[o].dim === 3) drawSample(o);
+    });
+    const end = () => { drag = null; };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  }
+  // ECDF hover, synced across the plots
+  for (let s = 0; s < 3; s++) {
+    const cv = $('cc' + s);
+    cv.addEventListener('pointermove', e => {
+      if (!XR || animating) return;
+      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, L = PAD.l, R = r.width - PAD.r;
+      if (x < L || x > R) { if (S.hx != null) { S.hx = null; drawCDFs(); } return; }
+      S.hx = TFI[PS](XR[0] + (x - L) / (R - L) * (XR[1] - XR[0])); drawCDFs();
+    });
+    cv.addEventListener('pointerleave', () => { S.hx = null; drawCDFs(); });
+  }
+
+  // fit both rows of plots into the window on wide screens
+  function fitLayout() {
+    const app = $('app');
+    if (innerWidth <= 860) { app.classList.remove('fitted'); return; }
+    app.classList.add('fitted');
+    const p = $('pw0'), c = $('cw1');
+    const cur = p.offsetHeight + c.offsetHeight;
+    const bottom = $('cdfs').getBoundingClientRect().bottom + scrollY + 16;
+    const top = app.getBoundingClientRect().top + scrollY;
+    const other = bottom - top - cur;
+    const ph = Math.max(150, Math.min(560, Math.floor((innerHeight - other) / 2), Math.floor(p.offsetWidth * 1.0)));
+    app.style.setProperty('--ph', ph + 'px');
+  }
+  window.addEventListener('resize', () => { fitLayout(); });
+  fitLayout(); requestAnimationFrame(fitLayout);
+  const redrawAll = () => { readTheme(); drawSamples(); drawCDFs(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+  new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  let rz = 0; new ResizeObserver(() => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { fitLayout(); drawSamples(); if (!animating) drawCDFs(); }); }).observe($('samples'));
+  if (document.fonts) document.fonts.ready.then(() => { readTheme(); drawCDFs(); });
+
+  showFnParams(); setButton(); resample();
+}
+init();
+})();
+</script>
+
+</body></html>
