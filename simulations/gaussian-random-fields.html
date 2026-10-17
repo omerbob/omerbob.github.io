@@ -1,0 +1,1045 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Persistent Homology of Gaussian Random Fields</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@1,400;1,500&display=swap">
+<style>
+/* Layout: control rail on the left; viewer + level readout on top; a full-width barcode with a level strip underneath, read left→right as u decreases (as in the paper). */
+:root {
+  --bg: #f3f4f6; --surface: #ffffff; --surface-2: #eceef2; --line: #dde1e7;
+  --fg: #141a23; --muted: #646d7b; --accent: #e0532a; --under: #e4e7ec;
+  --h0: #2a3446; --h1: #2d6ae0; --h2: #0f9268;
+  --shadow: 0 1px 2px rgba(20,26,35,.05), 0 6px 24px rgba(20,26,35,.05);
+  --f-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --f-math: "STIX Two Text", "Cambria Math", "Times New Roman", serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c0f14; --surface: #141920; --surface-2: #1c222b; --line: #262e3a;
+  --fg: #e5e8ee; --muted: #8b94a3; --accent: #ff7b4f; --under: #1a2029;
+  --h0: #d3d9e3; --h1: #6c9bff; --h2: #35c592;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.25); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0c0f14; --surface: #141920; --surface-2: #1c222b; --line: #262e3a;
+  --fg: #e5e8ee; --muted: #8b94a3; --accent: #ff7b4f; --under: #1a2029;
+  --h0: #d3d9e3; --h1: #6c9bff; --h2: #35c592;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.25); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--f-sans); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 20px 16px; height: 100%; display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { flex: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 14px; }
+h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.sub { margin: 0; color: var(--muted); max-width: 72ch; }
+.m { font-family: var(--f-math); font-style: italic; font-size: 1.08em; }
+.app { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+main { display: flex; flex-direction: column; gap: 16px; min-width: 0; min-height: 0; }
+
+/* controls */
+.controls { padding: 18px 18px 14px; display: grid; gap: 22px; align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.controls section { display: grid; gap: 14px; }
+h2 { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.row { display: grid; gap: 6px; }
+.row > label, .lab { font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.row output, .val { font: 500 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.hint.warn { color: var(--accent); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 3px; }
+.seg button { font: 500 12.5px var(--f-sans); color: var(--muted); background: transparent; border: 0; border-radius: 7px; padding: 6px 8px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--fg); }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+select, input[type=number] { font: 13px var(--f-mono); color: var(--fg); background: var(--surface-2); border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; width: 100%; }
+.seedrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+.btn { font: 500 12.5px var(--f-sans); color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.meta { font: 12px var(--f-mono); color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; font-variant-numeric: tabular-nums; }
+
+/* top row */
+.top { flex: 0 0 40%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+.viewer { position: relative; min-height: 0; overflow: hidden; }
+.viewer canvas { display: block; width: 100%; height: 100%; }
+#view2d, #view3d { position: absolute; inset: 0; }
+#view2d { display: grid; place-items: center; }
+#view2d canvas { border-radius: 8px; }
+.vtag { position: absolute; left: 14px; bottom: 12px; font: 12px var(--f-mono); color: var(--muted); pointer-events: none; }
+.busy { position: absolute; right: 14px; top: 12px; font: 500 12px var(--f-mono); color: var(--accent); }
+.err { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+
+.readout { padding: 20px; display: grid; gap: 16px; align-content: start; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.ubig { font: 500 30px var(--f-mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 10px; }
+.ubig .m { font-size: 30px; font-weight: 400; }
+.betti { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+.tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
+.tile b { font: 500 24px var(--f-mono); font-variant-numeric: tabular-nums; }
+.tile span { font-size: 12px; color: var(--muted); }
+.tile .k { font-family: var(--f-math); font-style: italic; font-size: 15px; color: var(--fg); }
+.tile.d0 b { color: var(--h0); } .tile.d1 b { color: var(--h1); } .tile.d2 b { color: var(--h2); }
+.cbarwrap { display: grid; gap: 6px; margin-top: 2px; }
+.vcbar { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); height: min(62%, 230px); display: grid; grid-template-columns: auto 8px; grid-template-rows: auto minmax(0, 1fr); gap: 6px 6px; pointer-events: none; }
+.vcbar > .m { grid-column: 2; justify-self: center; font-size: 14px; color: var(--muted); }
+.vbar { grid-column: 2; grid-row: 2; border-radius: 4px; }
+.vticks { grid-column: 1; grid-row: 2; position: relative; width: 18px; font: 10.5px var(--f-mono); color: var(--muted); }
+.vticks span { position: absolute; right: 0; transform: translateY(50%); line-height: 1; }
+.cbar { height: 10px; border-radius: 5px; }
+.cbarTicks { position: relative; height: 14px; font: 11px var(--f-mono); color: var(--muted); }
+.cbarTicks span { position: absolute; transform: translateX(-50%); }
+.howto { margin: 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+
+/* barcode */
+.bc { padding: 16px 16px 10px; min-width: 0; }
+.bchead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12px var(--f-sans); display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 999px; padding: 4px 10px 4px 8px; cursor: pointer; }
+.chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.chip .n { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="false"] { opacity: .45; }
+.chip[aria-pressed="false"] i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+.bcright { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bcright .seg { min-width: 180px; }
+.strip { position: relative; height: 0; }
+.thumb { position: absolute; top: 0; transform: translateX(-50%); padding: 0; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; cursor: pointer; overflow: hidden; display: grid; }
+.thumb canvas { display: block; }
+.thumb span { font: 11px var(--f-mono); color: var(--muted); padding: 2px 0 3px; text-align: center; font-variant-numeric: tabular-nums; }
+.thumb.on { border-color: var(--accent); }
+.thumb.on span { color: var(--accent); }
+.plotwrap { position: relative; flex: 1; min-height: 0; }
+#plot { display: block; position: absolute; left: 0; right: 0; bottom: 0; width: 100%; touch-action: none; cursor: ew-resize; }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font: 12px var(--f-mono); padding: 5px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
+.bc { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.bchead, .foot { flex: none; }
+.foot { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+
+/* short desktop windows: trim chrome so the plots keep their room */
+@media (max-height: 860px) {
+  .wrap { padding-block: 12px 10px; }
+  header { margin-bottom: 10px; }
+  header .sub, .foot, .vtag { display: none; }
+  .readout { padding: 16px; gap: 12px; }
+  .ubig, .ubig .m { font-size: 26px; }
+  .tile { padding: 8px 10px; }
+  .tile b { font-size: 21px; }
+}
+@media (max-height: 660px) {
+  .readout { padding: 12px 14px; gap: 10px; }
+  .readout > h2 { display: none; }
+  .ubig, .ubig .m { font-size: 22px; }
+  .tile { padding: 6px 9px; gap: 0; }
+  .tile b { font-size: 18px; }
+  .tile span { font-size: 11px; }
+  .controls { gap: 16px; padding-block: 14px 10px; }
+  .controls section { gap: 10px; }
+}
+/* phone-only pieces (hidden on larger screens) */
+.ponly, .sheethead, .hud, #openSheet { display: none; }
+.iconbtn { font: 500 13px var(--f-sans); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px 7px 11px; align-items: center; gap: 7px; cursor: pointer; box-shadow: var(--shadow); }
+.iconbtn svg { width: 16px; height: 16px; }
+.hud { position: absolute; pointer-events: none; font: 500 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+.hudtop { left: 10px; top: 10px; padding: 4px 10px; border-radius: 8px; background: var(--surface); background: color-mix(in srgb, var(--surface) 84%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.hudtop b { font-size: 16px; font-weight: 500; }
+.hudtop .m { font-size: 17px; }
+.hudbot { left: 10px; right: 10px; bottom: 10px; gap: 6px; flex-wrap: wrap; }
+.hb { padding: 3px 9px; border-radius: 999px; background: var(--surface); background: color-mix(in srgb, var(--surface) 84%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: inline-flex; gap: 5px; align-items: baseline; }
+.hb i { font: italic 14px var(--f-math); color: var(--muted); }
+.hb.d0 b { color: var(--h0); } .hb.d1 b { color: var(--h1); } .hb.d2 b { color: var(--h2); }
+.hb b { font-weight: 500; }
+.scrim { position: fixed; inset: 0; z-index: 25; background: rgba(8, 10, 14, .34); }
+
+/* Phone: one-screen layout. Viewer on top, barcode below, settings in a bottom sheet. */
+@media (max-width: 980px), (max-height: 520px) and (pointer: coarse) {
+  html, body { height: 100%; overflow: hidden; }
+  .wrap { height: 100%; display: flex; flex-direction: column; padding-block: 10px 8px; }
+  header { flex: none; flex-wrap: nowrap; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  h1 { font-size: 18px; }
+  header .sub { display: none; }
+  #openSheet { display: inline-flex; }
+  .app { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .top { flex: 0 0 46%; min-height: 0; display: flex; }
+  .viewer { flex: 1; height: 100%; aspect-ratio: auto; max-height: none; }
+  .readout, .vtag, .foot, .vcbar { display: none; }
+  .hudtop { display: block; }
+  .hudbot { display: flex; }
+  .busy { top: 14px; }
+  .bc { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 10px 4px; }
+  .bchead { flex-wrap: nowrap; gap: 8px; margin-bottom: 6px; }
+  .legend { flex-wrap: nowrap; overflow-x: auto; min-width: 0; gap: 4px; scrollbar-width: none; }
+  .legend::-webkit-scrollbar { display: none; }
+  .chip { padding: 5px 9px 5px 8px; gap: 5px; flex: none; }
+  .chip .nm, .chip .n { display: none; }
+  .bcright { flex: none; }
+  .bcright .seg { min-width: 0; }
+  .bcright .seg button { padding: 6px 9px; }
+  .plotwrap { flex: 1; min-height: 0; }
+  #plot { position: absolute; left: 0; right: 0; bottom: 0; touch-action: none; }
+  select, input[type=number] { font-size: 16px; }
+  .controls { position: fixed; left: 0; right: 0; top: auto; bottom: 0; z-index: 30; max-height: 82%; overflow-y: auto; overscroll-behavior: contain;
+    grid-template-columns: minmax(0, 1fr); gap: 20px; border-radius: 18px 18px 0 0; border-bottom: 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, .2);
+    padding: 0 max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+    transform: translateY(105%); visibility: hidden; transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .3s; }
+  .controls.open { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+  .sheethead { display: flex; position: sticky; top: 0; z-index: 2; background: var(--surface); align-items: center; justify-content: space-between; padding: 18px 0 10px; border-bottom: 1px solid var(--line); touch-action: none; }
+  .sheethead h2 { font-size: 13px; color: var(--fg); letter-spacing: .06em; }
+  .grab { position: absolute; left: 50%; top: 7px; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--line); }
+  p.ponly { display: block; }
+  .cbarwrap.ponly { display: grid; }
+  .meta { grid-column: auto; }
+}
+@media (max-width: 380px) {
+  .bcright .seg button { padding: 6px 7px; font-size: 12px; }
+  .chip { padding: 5px 7px 5px 6px; }
+}
+/* Phone held sideways: viewer and barcode side by side */
+@media (max-height: 520px) and (pointer: coarse) and (orientation: landscape) {
+  .wrap { padding-block: 6px; }
+  header { margin-bottom: 6px; }
+  main { flex-direction: row; }
+  .top { flex: 0 0 40%; }
+}
+@media (pointer: coarse) { input[type=range] { height: 30px; } button { touch-action: manipulation; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Persistent Homology of Gaussian Random Fields</h1>
+    <button class="iconbtn" id="openSheet" aria-label="Open settings" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h7M13 4h1M2 8h2M8 8h6M2 12h8M14 12h0"/><circle cx="11" cy="4" r="1.6"/><circle cx="6" cy="8" r="1.6"/><circle cx="12" cy="12" r="1.6"/></svg><span>Settings</span></button>
+    <p class="sub">Barcodes of the excursion sets <span class="m">A<sub>u</sub></span> = {<span class="m">f</span> ≥ <span class="m">u</span>} of a smooth Gaussian random field.</p>
+  </header>
+
+  <div class="app">
+    <aside class="panel controls" id="sheet" aria-label="Settings">
+      <div class="sheethead" id="sheethead"><span class="grab" aria-hidden="true"></span><h2>Settings</h2><button class="btn" id="sheetDone">Done</button></div>
+      <section>
+        <h2>Field</h2>
+        <div class="row"><span class="lab">Domain</span>
+          <div class="seg" id="segDim"><button data-v="2" aria-pressed="false">Square [0,1]²</button><button data-v="3" aria-pressed="true">Cube [0,1]³</button></div></div>
+        <div class="row"><span class="lab">Boundary</span>
+          <div class="seg" id="segBnd"><button data-v="box" aria-pressed="true">Box</button><button data-v="torus" aria-pressed="true">Torus</button></div></div>
+        <div class="row"><label for="alpha"><span>Covariance <span class="m">α</span></span> <output id="alphaOut">100</output></label>
+          <input type="range" id="alpha" min="0" max="1000" step="1">
+          <p class="hint" id="alphaHint"></p></div>
+        <div class="row"><label for="res">Grid points per side</label>
+          <select id="res"></select></div>
+        <div class="row"><label for="seed">Seed</label>
+          <div class="seedrow"><input type="number" id="seed" min="1" max="999999" step="1"><button class="btn" id="reroll">New field</button></div></div>
+      </section>
+      <section>
+        <h2>Barcode</h2>
+        <div class="row"><label for="minlen"><span>Hide bars shorter than</span> <output id="minlenOut">0.05</output></label>
+          <input type="range" id="minlen" min="0" max="1.5" step="0.01"></div>
+        <div class="row"><span class="lab">Order bars by</span>
+          <div class="seg" id="segSort"><button data-v="birth" aria-pressed="true">Birth</button><button data-v="length" aria-pressed="false">Length</button></div></div>
+      </section>
+      <section class="help">
+        <h2>How to read it</h2>
+        <p class="howto ponly">The picture shows the excursion set <span class="m">A<sub>u</sub></span> = {<span class="m">f</span> ≥ <span class="m">u</span>} of a smooth Gaussian random field.</p>
+        <p class="howto">Moving right on the barcode lowers <span class="m">u</span> and the set grows. Each bar is one component, handle or cavity: it starts where the feature appears and ends where it merges away or fills in. Drag across the barcode to change <span class="m">u</span>; the Betti numbers are the counts of bars crossing the orange line. Point at or tap a bar to see its numbers.</p>
+        <div class="cbarwrap ponly"><span class="lab"><span>Colour = field value <span class="m">f</span></span></span><div class="cbar"></div><div class="cbarTicks"></div></div>
+      </section>
+      <div class="meta" id="meta">Computing…</div>
+    </aside>
+
+    <main>
+      <div class="top">
+        <section class="panel viewer" aria-label="Excursion set">
+          <div id="view2d" hidden><canvas id="c2d"></canvas></div>
+          <div id="view3d"></div>
+          <div class="vtag" id="vtag"></div>
+          <div class="vcbar" role="img" aria-label="Colour scale: field value f from −3 to 3"><span class="m">f</span><div class="vbar"></div><div class="vticks"></div></div>
+          <div class="busy" id="busy">Computing…</div>
+          <div class="hud hudtop" aria-live="polite"><span class="m">u</span> = <b id="hudU">1.00</b></div>
+          <div class="hud hudbot" id="hudB"></div>
+        </section>
+        <section class="panel readout" aria-label="Level">
+          <h2>Level</h2>
+          <div class="ubig"><span class="m">u</span><span>=</span><span id="uval">1.00</span></div>
+          <input type="range" id="level" min="-4" max="4" step="0.01" aria-label="Level u">
+          <div class="betti" id="betti"></div>
+        </section>
+      </div>
+
+      <section class="panel bc" aria-label="Barcode">
+        <div class="bchead">
+          <div class="legend" id="legend"></div>
+          <div class="bcright"><div class="seg" id="segView"><button data-v="barcode" aria-pressed="true">Barcode</button><button data-v="diagram" aria-pressed="false">Diagram</button></div></div>
+        </div>
+        <div class="plotwrap" id="plotwrap">
+          <div class="strip" id="strip"></div>
+          <canvas id="plot"></canvas>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <p class="foot" id="foot"></p>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script>
+// ---------- Gaussian random field + cubical superlevel persistence ----------
+// Field: mean 0, variance 1, covariance R(p) = exp(-alpha |p|^2) on [0,1]^N
+// (white noise convolved with a Gaussian kernel of std 1/(2 sqrt(alpha))).
+// Persistence: V-construction cubical complex on the vertex grid, superlevel
+// filtration (cell value = min of its vertices). H0 by union-find, H_{N-1} by
+// dual union-find, H1 in 3D by column reduction with clearing + compression.
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gaussRng(seed) {
+  const r = mulberry32(seed >>> 0 || 1); let spare = null;
+  return () => {
+    if (spare !== null) { const s = spare; spare = null; return s; }
+    let u, v, s;
+    do { u = 2 * r() - 1; v = 2 * r() - 1; s = u * u + v * v; } while (s >= 1 || s === 0);
+    const m = Math.sqrt(-2 * Math.log(s) / s); spare = v * m; return u * m;
+  };
+}
+
+function convAxis(src, dims, a, ker, circ) {
+  const L = dims[a], K = ker.length;
+  const outL = circ ? L : L - K + 1;
+  const od = dims.slice(); od[a] = outL;
+  let st = 1; for (let i = 0; i < a; i++) st *= dims[i];
+  const tot = od.reduce((p, q) => p * q, 1);
+  const out = new Float64Array(tot);
+  const nLines = tot / outL, line = new Float64Array(L);
+  for (let li = 0; li < nLines; li++) {
+    const lo = li % st, hi = (li - lo) / st;
+    const bIn = lo + hi * st * L, bOut = lo + hi * st * outL;
+    for (let i = 0; i < L; i++) line[i] = src[bIn + i * st];
+    if (circ) {
+      for (let o = 0; o < L; o++) {
+        let s = 0;
+        for (let d = 0; d < L; d++) { const j = o + d; s += ker[d] * line[j < L ? j : j - L]; }
+        out[bOut + o * st] = s;
+      }
+    } else {
+      for (let o = 0; o < outL; o++) {
+        let s = 0;
+        for (let j = 0; j < K; j++) s += ker[j] * line[o + j];
+        out[bOut + o * st] = s;
+      }
+    }
+  }
+  return { out, dims: od };
+}
+
+function makeField(N, n, alpha, torus, seed) {
+  const h = torus ? 1 / n : 1 / (n - 1);
+  const sc = 1 / (2 * Math.sqrt(alpha)) / h;   // kernel std in grid cells
+  const R = Math.max(1, Math.ceil(4 * sc));
+  let ker;
+  if (torus) {                                   // periodised kernel, offsets d = 0..n-1 (centred via shift)
+    ker = new Float64Array(n);
+    for (let j = -R; j <= R; j++) {
+      const w = Math.exp(-j * j / (2 * sc * sc));
+      ker[((j % n) + n) % n] += w;
+    }
+  } else {
+    ker = new Float64Array(2 * R + 1);
+    for (let j = -R; j <= R; j++) ker[j + R] = Math.exp(-j * j / (2 * sc * sc));
+  }
+  let s2 = 0; for (const w of ker) s2 += w * w;
+  const norm = 1 / Math.sqrt(s2);
+  for (let i = 0; i < ker.length; i++) ker[i] *= norm;
+  const P = torus ? n : n + 2 * R;
+  let dims = new Array(N).fill(P);
+  let tot = P ** N;
+  const g = gaussRng(seed);
+  let arr = new Float64Array(tot);
+  for (let i = 0; i < tot; i++) arr[i] = g();
+  for (let a = 0; a < N; a++) { const r = convAxis(arr, dims, a, ker, torus); arr = r.out; dims = r.dims; }
+  return Float32Array.from(arr);
+}
+
+// ---------- persistence ----------
+function persistence(f, N, n, torus) {
+  const m = torus ? 2 * n : 2 * n - 1;
+  const M = m ** N, V = n ** N;
+  const strides = [1, m, m * m].slice(0, N);
+  // vertex order: value desc, index asc
+  const vord = new Int32Array(V); for (let i = 0; i < V; i++) vord[i] = i;
+  vord.sort((a, b) => (f[b] - f[a]) || (a - b));
+  const vval = new Float64Array(V);
+  for (let r = 0; r < V; r++) vval[r] = f[vord[r]];
+  const key = new Int32Array(M), dim = new Uint8Array(M);
+  const coord = (c, a) => Math.floor(c / strides[a]) % m;
+  // place vertex ranks
+  for (let r = 0; r < V; r++) {
+    let v = vord[r], c = 0;
+    for (let a = 0; a < N; a++) { const x = v % n; v = (v - x) / n; c += 2 * x * strides[a]; }
+    key[c] = r;
+  }
+  for (let c = 0; c < M; c++) { let d = 0; for (let a = 0; a < N; a++) d += coord(c, a) & 1; dim[c] = d; }
+  // max passes per axis (cell value = min over vertices  <=> key = max rank)
+  for (let a = 0; a < N; a++) {
+    const st = strides[a];
+    for (let c = 0; c < M; c++) {
+      const x = coord(c, a);
+      if (!(x & 1)) continue;
+      let ok = true; for (let b = a + 1; b < N; b++) if (coord(c, b) & 1) { ok = false; break; }
+      if (!ok) continue;
+      const lo = c - st, hi = x === m - 1 ? c - x * st : c + st;
+      key[c] = Math.max(key[lo], key[hi]);
+    }
+  }
+  // per-dimension order by (key asc, idx asc) via counting sort
+  const rank = new Int32Array(M), ords = [];
+  const cnt = new Int32Array(V + 1);
+  for (let k = 0; k <= N; k++) {
+    cnt.fill(0); let total = 0;
+    for (let c = 0; c < M; c++) if (dim[c] === k) { cnt[key[c] + 1]++; total++; }
+    for (let i = 1; i <= V; i++) cnt[i] += cnt[i - 1];
+    const ord = new Int32Array(total);
+    for (let c = 0; c < M; c++) if (dim[c] === k) { const p = cnt[key[c]]++; ord[p] = c; rank[c] = p; }
+    ords.push(ord);
+  }
+  const val = c => vval[key[c]];
+  // faces / cofaces
+  const faces = (c, out) => {
+    let k = 0;
+    for (let a = 0; a < N; a++) {
+      const x = coord(c, a); if (!(x & 1)) continue;
+      const st = strides[a];
+      out[k++] = c - st; out[k++] = (x === m - 1) ? c - x * st : c + st;
+    }
+    return k;
+  };
+  const cofaces = (c, out) => {   // returns count; -1 encodes "outside" (box boundary)
+    let k = 0;
+    for (let a = 0; a < N; a++) {
+      const x = coord(c, a); if (x & 1) continue;
+      const st = strides[a];
+      if (x > 0) out[k++] = c - st; else out[k++] = torus ? c + (m - 1) * st : -1;
+      if (x < m - 1) out[k++] = c + st; else out[k++] = -1;
+    }
+    return k;
+  };
+  const bars = Array.from({ length: N }, () => []);
+  const buf = new Int32Array(6), buf2 = new Int32Array(6);
+  // H0
+  const parent = new Int32Array(M + 1); for (let i = 0; i <= M; i++) parent[i] = i;
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const neg1 = new Uint8Array(M);
+  for (const e of ords[1]) {
+    faces(e, buf);
+    let ra = find(buf[0]), rb = find(buf[1]);
+    if (ra === rb) continue;
+    if (rank[ra] > rank[rb]) { const t = ra; ra = rb; rb = t; }  // ra older
+    parent[rb] = ra; neg1[e] = 1;
+    const b = val(rb), d = val(e);
+    if (b > d) bars[0].push([b, d]);
+  }
+  bars[0].push([vval[0], -Infinity]);
+  // H_{N-1} by dual union-find
+  for (let i = 0; i <= M; i++) parent[i] = i;
+  const OUT = M;
+  const age = x => x === OUT ? Infinity : rank[x];
+  const posTop = new Uint8Array(M);
+  const ordT = ords[N - 1];
+  for (let i = ordT.length - 1; i >= 0; i--) {
+    const s = ordT[i];
+    cofaces(s, buf);           // exactly 2 entries for an (N-1)-cell
+    let r1 = find(buf[0] < 0 ? OUT : buf[0]), r2 = find(buf[1] < 0 ? OUT : buf[1]);
+    if (r1 === r2) continue;
+    if (age(r1) < age(r2)) { const t = r1; r1 = r2; r2 = t; }    // r1 older (in reverse)
+    parent[r2] = r1; posTop[s] = 1;
+    const b = val(s), d = val(r2);
+    if (b > d) bars[N - 1].push([b, d]);
+  }
+  if (N === 2) {
+    // essential H1 (torus only): edges neither H0-negative nor dual-positive
+    for (const e of ords[1]) if (!neg1[e] && !posTop[e]) bars[1].push([val(e), -Infinity]);
+  } else {
+    // H1 in 3D: reduce square columns (excluding H2 births)
+    const nE = ords[1].length, ordE = ords[1];
+    const pivotOf = new Int32Array(nE).fill(-1);
+    const stored = new Map();
+    const bnd = s => {
+      const k = faces(s, buf2); const r = [];
+      for (let i = 0; i < k; i++) if (!neg1[buf2[i]]) r.push(rank[buf2[i]]);
+      return r.sort((a, b) => a - b);
+    };
+    const symdiff = (A, B) => {
+      const out = []; let i = 0, j = 0;
+      while (i < A.length && j < B.length) {
+        if (A[i] < B[j]) out.push(A[i++]); else if (A[i] > B[j]) out.push(B[j++]); else { i++; j++; }
+      }
+      while (i < A.length) out.push(A[i++]); while (j < B.length) out.push(B[j++]);
+      return out;
+    };
+    for (const s of ords[2]) {
+      if (posTop[s]) continue;
+      let col = bnd(s), mod = false;
+      while (col.length) {
+        const p = col[col.length - 1], own = pivotOf[p];
+        if (own < 0) break;
+        col = symdiff(col, stored.get(own) || bnd(own)); mod = true;
+      }
+      if (!col.length) { bars[2].push([val(s), -Infinity]); continue; }   // essential H2 (torus)
+      const p = col[col.length - 1];
+      pivotOf[p] = s; if (mod) stored.set(s, col);
+      const b = val(ordE[p]), d = val(s);
+      if (b > d) bars[1].push([b, d]);
+    }
+    for (let p = 0; p < nE; p++) { const e = ordE[p]; if (!neg1[e] && pivotOf[p] < 0) bars[1].push([val(e), -Infinity]); }
+  }
+  return { bars, min: vval[V - 1], max: vval[0] };
+}
+
+
+
+</script>
+<script type="module">
+// ---------------- state ----------------
+const RES = { 2: [64, 96, 128, 192, 256], 3: [24, 32, 40, 48, 56] };
+const S = { N: 3, torus: false, alpha: 100, res: { 2: 128, 3: 40 }, seed: 2010,
+  minLen: 0.05, dims: [true, true, true], sort: 'birth', view: 'barcode', u: 1.0 };
+const A_MIN = 20, A_MAX = 600;
+const sToAlpha = s => A_MIN * Math.pow(A_MAX / A_MIN, s / 1000);
+const alphaToS = a => 1000 * Math.log(a / A_MIN) / Math.log(A_MAX / A_MIN);
+const NAMES = { 2: ['components', 'holes'], 3: ['components', 'handles', 'cavities'] };
+let F = null;            // computed field + bars
+let sorted = [[], [], []];
+let thumbLevels = [];
+
+const $ = id => document.getElementById(id);
+const MQ = matchMedia('(max-width: 980px), (max-height: 520px) and (pointer: coarse)');
+const isM = () => MQ.matches;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const fmt = (v, d = 2) => v === -Infinity ? '−∞' : (v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const hexRgb = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const x = parseInt(h, 16); return [(x >> 16) & 255, (x >> 8) & 255, x & 255]; };
+
+// ---------------- colour map (diverging, field value) ----------------
+const STOPS = [[-3.2, '#1b2f7a'], [-2.0, '#2f62c4'], [-0.9, '#6fb0e0'], [0, '#e9ece4'], [0.9, '#f4c35a'], [2.0, '#e9692f'], [3.2, '#a3192b']].map(([v, c]) => [v, hexRgb(c)]);
+const LUT = new Uint8Array(1024 * 3);
+for (let i = 0; i < 1024; i++) {
+  const v = -3.2 + 6.4 * i / 1023;
+  let k = 0; while (k < STOPS.length - 2 && v > STOPS[k + 1][0]) k++;
+  const [v0, c0] = STOPS[k], [v1, c1] = STOPS[k + 1], t = clamp((v - v0) / (v1 - v0), 0, 1);
+  for (let j = 0; j < 3; j++) LUT[i * 3 + j] = Math.round(c0[j] + t * (c1[j] - c0[j]));
+}
+const lutIdx = v => clamp(Math.round((v + 3.2) / 6.4 * 1023), 0, 1023) * 3;
+
+// ---------------- controls ----------------
+function setSeg(id, v) { for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === String(v))); }
+function onSeg(id, fn) { $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; setSeg(id, b.dataset.v); fn(b.dataset.v); }); }
+function fillRes() {
+  $('res').innerHTML = RES[S.N].map(r => `<option value="${r}"${r === S.res[S.N] ? ' selected' : ''}>${r}${S.N === 3 ? '³' : '²'}${S.N === 3 && r >= 56 ? '  (slower)' : ''}</option>`).join('');
+}
+function alphaHint() {
+  const n = S.res[S.N], h = S.torus ? 1 / n : 1 / (n - 1), l = 1 / Math.sqrt(S.alpha);
+  const steps = l / h, el = $('alphaHint');
+  el.innerHTML = `<span class="m">R</span>(<span class="m">p</span>) = exp(−<span class="m">α</span>‖<span class="m">p</span>‖²). Correlation length 1/√<span class="m">α</span> = ${l.toFixed(3)}, about ${steps.toFixed(1)} grid steps.` +
+    (steps < 2.2 ? ' The grid is coarse for this α, so many bars will be pixel-scale.' : '');
+  el.classList.toggle('warn', steps < 2.2);
+}
+let tCompute = 0;
+const scheduleCompute = (ms = 160) => { clearTimeout(tCompute); tCompute = setTimeout(compute, ms); };
+
+function initControls() {
+  setSeg('segDim', S.N); setSeg('segBnd', S.torus ? 'torus' : 'box'); setSeg('segSort', S.sort); setSeg('segView', S.view);
+  $('alpha').value = alphaToS(S.alpha); $('alphaOut').textContent = S.alpha;
+  $('minlen').value = S.minLen; $('minlenOut').textContent = S.minLen.toFixed(2);
+  $('seed').value = S.seed; fillRes(); alphaHint();
+  onSeg('segDim', v => { S.N = +v; fillRes(); alphaHint(); switchView(); scheduleCompute(0); });
+  onSeg('segBnd', v => { S.torus = v === 'torus'; alphaHint(); scheduleCompute(0); });
+  onSeg('segSort', v => { S.sort = v; sortBars(); drawPlot(); });
+  onSeg('segView', v => { S.view = v; drawPlot(); renderThumbs(); });
+  $('alpha').addEventListener('input', e => {
+    const a = sToAlpha(+e.target.value); S.alpha = a < 100 ? Math.round(a) : Math.round(a / 5) * 5;
+    $('alphaOut').textContent = S.alpha; alphaHint(); scheduleCompute(S.N === 3 ? 350 : 160);
+  });
+  $('res').addEventListener('change', e => { S.res[S.N] = +e.target.value; alphaHint(); scheduleCompute(0); });
+  $('seed').addEventListener('change', e => { S.seed = clamp(Math.round(+e.target.value) || 1, 1, 999999); e.target.value = S.seed; scheduleCompute(0); });
+  $('reroll').addEventListener('click', () => { S.seed = 1 + Math.floor(Math.random() * 999998); $('seed').value = S.seed; scheduleCompute(0); });
+  $('minlen').addEventListener('input', e => { S.minLen = +e.target.value; $('minlenOut').textContent = S.minLen.toFixed(2); sortBars(); drawPlot(); });
+  $('level').addEventListener('input', e => setLevel(+e.target.value));
+}
+
+// ---------------- compute ----------------
+function compute() {
+  $('busy').hidden = false; $('busy').textContent = 'Computing…';
+  setTimeout(() => {
+    const t0 = performance.now();
+    const n = S.res[S.N];
+    const f = makeField(S.N, n, S.alpha, S.torus, S.seed);
+    const t1 = performance.now();
+    const ph = persistence(f, S.N, n, S.torus);
+    const t2 = performance.now();
+    F = { f, N: S.N, n, torus: S.torus, bars: ph.bars, min: ph.min, max: ph.max };
+    const span = F.max - F.min;
+    F.hi = F.max + 0.03 * span; F.lo = F.min - 0.03 * span;
+    const lv = $('level'); lv.min = F.min.toFixed(2); lv.max = F.max.toFixed(2);
+    S.u = clamp(S.u, F.min, F.max);
+    sortBars();
+    const total = F.bars.reduce((s, b) => s + b.length, 0);
+    $('meta').innerHTML = `${n}${S.N === 3 ? '³' : '²'} grid · ${total.toLocaleString()} bars<br>field ${Math.round(t1 - t0)} ms · homology ${Math.round(t2 - t1)} ms`;
+    prepViewer();
+    setLevel(S.u, true);
+    renderThumbs();
+    $('busy').hidden = true;
+  }, 30);
+}
+
+function sortBars() {
+  if (!F) return;
+  sorted = F.bars.map(list => {
+    const L = list.filter(([b, d]) => b - d >= S.minLen);
+    if (S.sort === 'birth') L.sort((p, q) => (q[0] - p[0]) || (q[0] - q[1]) - (p[0] - p[1]));
+    else L.sort((p, q) => (q[0] - q[1]) - (p[0] - p[1]) || q[0] - p[0]);
+    return L;
+  });
+  renderLegend();
+}
+
+function betti(u) { return F.bars.map(list => { let c = 0; for (const [b, d] of list) if (b >= u && d < u) c++; return c; }); }
+
+function setLevel(u, force) {
+  if (!F) return;
+  u = clamp(u, F.min, F.max);
+  if (!force && Math.abs(u - S.u) < 1e-9) return;
+  S.u = u;
+  $('level').value = u; $('uval').textContent = fmt(u);
+  const B = betti(u);
+  let chi = 0; B.forEach((b, k) => chi += (k % 2 ? -1 : 1) * b);
+  const names = NAMES[F.N];
+  $('betti').style.gridTemplateColumns = `repeat(${B.length + 1}, minmax(0, 1fr))`;
+  $('betti').innerHTML = B.map((b, k) => `<div class="tile d${k}"><b>${b}</b><span><span class="k">β</span><sub>${k}</sub> ${names[k]}</span></div>`).join('') +
+    `<div class="tile"><b>${chi}</b><span><span class="k">χ</span> Euler</span></div>`;
+  $('hudU').textContent = fmt(u);
+  $('hudB').innerHTML = B.map((b, k) => `<span class="hb d${k}"><i>β<sub>${k}</sub></i><b>${b}</b></span>`).join('') + `<span class="hb"><i>χ</i><b>${chi}</b></span>`;
+  for (const t of document.querySelectorAll('.thumb')) t.classList.toggle('on', Math.abs(+t.dataset.u - u) < 0.005);
+  scheduleDraw();
+}
+let rafDraw = 0;
+function scheduleDraw() { if (rafDraw) return; rafDraw = requestAnimationFrame(() => { rafDraw = 0; drawViewer(); drawPlot(); }); }
+
+// ---------------- 2D viewer ----------------
+const V2 = { px: 0, hi: null, img: null };
+function sample2D(f, n, torus, X, Y) {
+  let gx, gy, i0, j0, i1, j1;
+  if (torus) { gx = X * n; gy = Y * n; i0 = Math.floor(gx); j0 = Math.floor(gy); gx -= i0; gy -= j0; i0 %= n; j0 %= n; i1 = (i0 + 1) % n; j1 = (j0 + 1) % n; }
+  else { gx = X * (n - 1); gy = Y * (n - 1); i0 = Math.min(Math.floor(gx), n - 2); j0 = Math.min(Math.floor(gy), n - 2); gx -= i0; gy -= j0; i1 = i0 + 1; j1 = j0 + 1; }
+  const a = f[i0 + n * j0], b = f[i1 + n * j0], c = f[i0 + n * j1], d = f[i1 + n * j1];
+  return (a * (1 - gx) + b * gx) * (1 - gy) + (c * (1 - gx) + d * gx) * gy;
+}
+function grid2D(px) {
+  const out = new Float32Array(px * px);
+  for (let y = 0; y < px; y++) for (let x = 0; x < px; x++)
+    out[x + px * y] = sample2D(F.f, F.n, F.torus, (x + 0.5) / px, 1 - (y + 0.5) / px);
+  return out;
+}
+function paint2D(ctx, px, hi, u) {
+  const img = ctx.createImageData(px, px), D = img.data, under = hexRgb(css('--under'));
+  const edge = 0.035 * (F.max - F.min) / 7;
+  for (let i = 0; i < px * px; i++) {
+    const v = hi[i], k = lutIdx(v), o = i * 4;
+    if (v >= u) {
+      const s = v - u < edge ? 0.72 : 1;
+      D[o] = LUT[k] * s; D[o + 1] = LUT[k + 1] * s; D[o + 2] = LUT[k + 2] * s;
+    } else {
+      D[o] = under[0] * 0.92 + LUT[k] * 0.08; D[o + 1] = under[1] * 0.92 + LUT[k + 1] * 0.08; D[o + 2] = under[2] * 0.92 + LUT[k + 2] * 0.08;
+    }
+    D[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function prep2D() {
+  const c = $('c2d'), host = $('view2d');
+  const side = Math.max(60, Math.min(host.clientWidth, host.clientHeight) - (isM() ? 16 : 28));
+  c.style.width = c.style.height = side + 'px';
+  const px = Math.min(900, Math.max(64, Math.round(side * Math.min(devicePixelRatio || 1, 2))));
+  c.width = c.height = px; V2.px = px; V2.hi = grid2D(px);
+}
+
+// ---------------- 3D viewer (three.js, surface nets) ----------------
+let THREE = null, OrbitControls = null, threeErr = null;
+const V3 = { ok: false };
+async function loadThree() {
+  try {
+    THREE = await import('three');
+    ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+  } catch (e) { threeErr = e; }
+}
+function srgbToLin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+const LUTLIN = new Float32Array(LUT.length); for (let i = 0; i < LUT.length; i++) LUTLIN[i] = srgbToLin(LUT[i]);
+
+function makePad() {
+  const n = F.n, P = n + 2, pad = new Float32Array(P * P * P).fill(-1e6);
+  for (let k = 0; k < n; k++) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++)
+    pad[(i + 1) + P * ((j + 1) + P * (k + 1))] = F.f[i + n * (j + n * k)];
+  return pad;
+}
+function tri3(f, n, x, y, z) {
+  x = clamp(x, 0, n - 1); y = clamp(y, 0, n - 1); z = clamp(z, 0, n - 1);
+  const i = Math.min(Math.floor(x), n - 2), j = Math.min(Math.floor(y), n - 2), k = Math.min(Math.floor(z), n - 2);
+  const a = x - i, b = y - j, c = z - k, I = i + n * (j + n * k), sy = n, sz = n * n;
+  const l = (p, q, t) => p + (q - p) * t;
+  return l(l(l(f[I], f[I + 1], a), l(f[I + sy], f[I + sy + 1], a), b), l(l(f[I + sz], f[I + sz + 1], a), l(f[I + sz + sy], f[I + sz + sy + 1], a), b), c);
+}
+const EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+function surfaceNets(pad, u) {
+  const n = F.n, P = n + 2, C = P - 1, f = F.f;
+  const cell = new Int32Array(C * C * C).fill(-1);
+  const off = [0, 1, P, 1 + P, P * P, 1 + P * P, P + P * P, 1 + P + P * P];
+  const pos = [], col = [], vals = new Float64Array(8), sc = 1 / (n - 1);
+  let nv = 0;
+  for (let k = 0; k < C; k++) for (let j = 0; j < C; j++) for (let i = 0; i < C; i++) {
+    const base = i + P * (j + P * k); let mask = 0;
+    for (let c = 0; c < 8; c++) { const v = pad[base + off[c]]; vals[c] = v; if (v >= u) mask |= 1 << c; }
+    if (mask === 0 || mask === 255) continue;
+    let sx = 0, sy = 0, sz = 0, cnt = 0;
+    for (const [a, b] of EDGES) {
+      if (((mask >> a) & 1) === ((mask >> b) & 1)) continue;
+      const t = (u - vals[a]) / (vals[b] - vals[a]);
+      sx += (a & 1) + t * ((b & 1) - (a & 1));
+      sy += ((a >> 1) & 1) + t * (((b >> 1) & 1) - ((a >> 1) & 1));
+      sz += ((a >> 2) & 1) + t * (((b >> 2) & 1) - ((a >> 2) & 1));
+      cnt++;
+    }
+    const rx = i + sx / cnt - 1, ry = j + sy / cnt - 1, rz = k + sz / cnt - 1;
+    pos.push(rx * sc - 0.5, rz * sc - 0.5, ry * sc - 0.5);   // y-up: field z -> world y
+    const L = lutIdx(tri3(f, n, rx, ry, rz));
+    col.push(LUTLIN[L], LUTLIN[L + 1], LUTLIN[L + 2]);
+    cell[i + C * (j + C * k)] = nv++;
+  }
+  const idx = [], st = [1, P, P * P];
+  const cid = (i, j, k) => cell[i + C * (j + C * k)];
+  for (let k = 1; k < P - 1; k++) for (let j = 1; j < P - 1; j++) for (let i = 1; i < P - 1; i++) {
+    const v = i + P * (j + P * k), inside = pad[v] >= u, c = [i, j, k];
+    for (let a = 0; a < 3; a++) {
+      if (c[a] >= P - 1) continue;
+      if ((pad[v + st[a]] >= u) === inside) continue;
+      const b = (a + 1) % 3, d = (a + 2) % 3;
+      const p0 = c.slice(), p1 = c.slice(), p2 = c.slice(), p3 = c.slice();
+      p1[b]--; p2[b]--; p2[d]--; p3[d]--;
+      const q0 = cid(...p0), q1 = cid(...p1), q2 = cid(...p2), q3 = cid(...p3);
+      if (q0 < 0 || q1 < 0 || q2 < 0 || q3 < 0) continue;
+      // world axes are (x, z, y): a handedness flip, so reverse winding
+      if (inside) idx.push(q0, q2, q1, q0, q3, q2); else idx.push(q0, q1, q2, q0, q2, q3);
+    }
+  }
+  return { pos: new Float32Array(pos), col: new Float32Array(col), idx: nv > 65535 ? new Uint32Array(idx) : new Uint16Array(idx) };
+}
+function buildGeom(u) {
+  const { pos, col, idx } = surfaceNets(V3.pad, u);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeVertexNormals();
+  return g;
+}
+function makeScene() {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x50586a, 1.5));
+  const d1 = new THREE.DirectionalLight(0xffffff, 1.9); d1.position.set(2, 3.2, 2.4); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.6); d2.position.set(-2.5, -1, -1.5); scene.add(d2);
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat); scene.add(mesh);
+  const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.7 }));
+  scene.add(frame);
+  return { scene, mesh, frame };
+}
+function init3D() {
+  if (V3.ok || !THREE) return;
+  const host = $('view3d');
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); r.setClearColor(0x000000, 0);
+  host.appendChild(r.domElement);
+  const cam = new THREE.PerspectiveCamera(28, 1, 0.1, 50); cam.position.set(2.3, 1.75, 2.65);
+  const ctl = new OrbitControls(cam, r.domElement);
+  ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.enablePan = false; ctl.minDistance = 1.4; ctl.maxDistance = 6;
+  const sc = makeScene();
+  const tr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); tr.setClearColor(0x000000, 0);
+  const tsc = makeScene();
+  Object.assign(V3, { ok: true, r, cam, ctl, ...sc, tr, tsc, dirty: true });
+  let tEnd = 0;
+  ctl.addEventListener('change', () => { V3.dirty = true; });
+  ctl.addEventListener('end', () => { clearTimeout(tEnd); tEnd = setTimeout(renderThumbs, 400); });
+  const loop = () => { requestAnimationFrame(loop); if (S.N !== 3) return; ctl.update(); if (V3.dirty) { V3.dirty = false; r.render(V3.scene, cam); } };
+  loop();
+  new ResizeObserver(size3D).observe(host);
+  size3D(); themeFrame();
+}
+function size3D() { if (!V3.ok) return; const h = $('view3d'); const w = h.clientWidth, ht = h.clientHeight; if (!w || !ht) return; V3.r.setSize(w, ht, false); V3.r.domElement.style.width = '100%'; V3.r.domElement.style.height = '100%'; V3.cam.aspect = w / ht; V3.cam.updateProjectionMatrix(); V3.dirty = true; }
+function themeFrame() { if (!V3.ok) return; const c = new THREE.Color(css('--muted')); V3.frame.material.color = c; V3.tsc.frame.material.color = c; V3.dirty = true; }
+
+// ---------------- viewer dispatch ----------------
+function switchView() {
+  $('view2d').hidden = S.N !== 2; $('view3d').hidden = S.N !== 3;
+  $('vtag').textContent = S.N === 3 ? 'Drag to rotate · scroll to zoom' : '';
+}
+function prepViewer() {
+  switchView();
+  if (F.N === 2) prep2D();
+  else if (V3.ok) { V3.pad = makePad(); }
+  else if (threeErr) $('view3d').innerHTML = '<div class="err">The 3D viewer could not load (three.js from jsDelivr was blocked). The barcode still works, and the 2D square needs no extra library.</div>';
+}
+function drawViewer() {
+  if (!F) return;
+  if (F.N === 2) { if (V2.hi) paint2D($('c2d').getContext('2d'), V2.px, V2.hi, S.u); return; }
+  if (!V3.ok || !V3.pad) return;
+  const old = V3.mesh.geometry; V3.mesh.geometry = buildGeom(S.u); old.dispose(); V3.dirty = true;
+}
+
+// ---------------- plot (barcode / diagram) ----------------
+const PL = { w: 0, h: 0, L: 44, R: 16, T: 0, B: 30, bands: [], drag: false };
+function thumbSize() {
+  const K = thumbLevels.length || 7, sp = (xOf(F.min) - xOf(F.max)) / (K + 1);
+  const cap = clamp($('plotwrap').clientHeight * (isM() ? 0.26 : 0.24), 30, isM() ? 66 : 96);
+  return Math.round(clamp(sp - (isM() ? 8 : 12), 30, cap));
+}
+function xOf(u) { return PL.L + (F.hi - u) / (F.hi - F.lo) * (PL.w - PL.L - PL.R); }
+function uOf(x) { return F.hi - (x - PL.L) / (PL.w - PL.L - PL.R) * (F.hi - F.lo); }
+function computeThumbLevels() {
+  const K = PL.w < 560 ? 5 : 7;
+  thumbLevels = [];
+  for (let i = 1; i <= K; i++) thumbLevels.push(Math.round((F.max - i * (F.max - F.min) / (K + 1)) * 100) / 100);
+}
+function layoutStrip() {
+  const strip = $('strip');
+  if (!F || S.view !== 'barcode') { strip.style.height = '0px'; strip.innerHTML = ''; return; }
+  const T = thumbSize();
+  strip.style.height = (T + (isM() ? 24 : 30)) + 'px';
+  strip.innerHTML = thumbLevels.map(u => `<button class="thumb" data-u="${u}" style="left:${xOf(u)}px" aria-label="Set level to ${fmt(u, 1)}"><canvas width="${T * 2}" height="${T * 2}" style="width:${T}px;height:${T}px"></canvas><span>${fmt(u, 2)}</span></button>`).join('');
+  for (const b of strip.querySelectorAll('.thumb')) {
+    b.classList.toggle('on', Math.abs(+b.dataset.u - S.u) < 0.005);
+    b.addEventListener('click', () => setLevel(+b.dataset.u));
+  }
+}
+function renderThumbs() {
+  if (!F) return;
+  sizePlot(); computeThumbLevels(); layoutStrip();
+  if (S.view !== 'barcode') { drawPlot(); return; }
+  const canv = [...document.querySelectorAll('.thumb canvas')];
+  if (F.N === 2) {
+    const px = canv[0] ? canv[0].width : 0; if (!px) return;
+    const hi = grid2D(px);
+    canv.forEach((c, i) => paint2D(c.getContext('2d'), px, hi, thumbLevels[i]));
+  } else if (V3.ok && V3.pad) {
+    const px = canv[0] ? canv[0].width : 0; if (!px) return;
+    V3.tr.setPixelRatio(1); V3.tr.setSize(px, px, false);
+    const cam = V3.cam.clone(); cam.aspect = 1; cam.updateProjectionMatrix();
+    canv.forEach((c, i) => {
+      const old = V3.tsc.mesh.geometry; V3.tsc.mesh.geometry = buildGeom(thumbLevels[i]); old.dispose();
+      V3.tr.render(V3.tsc.scene, cam);
+      const ctx = c.getContext('2d'); ctx.clearRect(0, 0, px, px); ctx.drawImage(V3.tr.domElement, 0, 0, px, px);
+    });
+  }
+  drawPlot();
+}
+
+function renderLegend() {
+  const N = F.N, names = NAMES[N];
+  $('legend').innerHTML = names.map((nm, k) => `<button class="chip" data-k="${k}" aria-pressed="${S.dims[k]}" style="--c:var(--h${k})" title="Show or hide H${k}"><i></i>H${'₀₁₂'[k]}<span class="nm"> ${nm}</span> <span class="n">${sorted[k].length}</span></button>`).join('');
+  $('foot').textContent = `Showing bars of length ≥ ${S.minLen.toFixed(2)}. Betti numbers count every bar. ${F.torus ? 'On the torus a few bars never die (the torus has its own loops and cavities).' : ''}`;
+}
+$('legend').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; const k = +b.dataset.k; S.dims[k] = !S.dims[k]; b.setAttribute('aria-pressed', S.dims[k]); drawPlot(); });
+
+function sizePlot() {
+  const wrap = $('plotwrap'), c = $('plot');
+  PL.w = wrap.clientWidth;
+  PL.L = isM() ? 30 : 44; PL.R = isM() ? 8 : 16; PL.B = isM() ? 26 : 30;
+  const sh = $('strip').offsetHeight; PL.h = Math.max(90, wrap.clientHeight - sh); c.style.top = sh + 'px';
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(PL.w * dpr); c.height = Math.round(PL.h * dpr); c.style.height = PL.h + 'px';
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return ctx;
+}
+function ticks(lo, hi) { const out = []; const step = (hi - lo) > 5 ? 1 : 0.5; for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) out.push(+t.toFixed(2)); return out; }
+
+function drawPlot() {
+  if (!F) return;
+  const ctx = sizePlot();
+  const C = { fg: css('--fg'), muted: css('--muted'), line: css('--line'), acc: css('--accent'), h: [css('--h0'), css('--h1'), css('--h2')] };
+  ctx.clearRect(0, 0, PL.w, PL.h);
+  ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace'; ctx.textBaseline = 'middle';
+  if (S.view === 'barcode') drawBarcode(ctx, C); else drawDiagram(ctx, C);
+}
+
+function drawBarcode(ctx, C) {
+  const dimsOn = [...Array(F.N).keys()].filter(k => S.dims[k]);
+  const top = 4, bottom = PL.h - PL.B, gap = 8;
+  const totalH = bottom - top - gap * Math.max(0, dimsOn.length - 1);
+  const w = dimsOn.map(k => Math.max(Math.sqrt(sorted[k].length), 4));
+  const ws = w.reduce((a, b) => a + b, 0) || 1;
+  PL.bands = []; let y = top;
+  dimsOn.forEach((k, i) => { const h = Math.max(26, totalH * w[i] / ws); PL.bands.push({ k, y, h }); y += h + gap; });
+  const xL = PL.L, xR = PL.w - PL.R, u = S.u, xu = xOf(u);
+  // bands
+  for (const B of PL.bands) {
+    ctx.fillStyle = C.line; ctx.globalAlpha = 0.35; ctx.fillRect(xL, B.y, xR - xL, B.h); ctx.globalAlpha = 1;
+    ctx.fillStyle = C.h[B.k]; ctx.font = 'italic 15px "STIX Two Text", serif'; ctx.textAlign = 'right';
+    ctx.fillText('H', xL - 16, B.y + B.h / 2); ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillText(String(B.k), xL - 8, B.y + B.h / 2 + 5);
+  }
+  // guide lines at thumbnail levels
+  ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = C.muted; ctx.globalAlpha = 0.45; ctx.lineWidth = 1;
+  for (const t of thumbLevels) { const x = Math.round(xOf(t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, bottom); ctx.stroke(); }
+  ctx.restore();
+  // bars
+  for (const B of PL.bands) {
+    const L = sorted[B.k], nb = L.length; if (!nb) { ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.font = '11px "IBM Plex Mono", monospace'; ctx.fillText('no bars', xL + 8, B.y + B.h / 2); continue; }
+    const rh = (B.h - 4) / nb, bh = rh > 3 ? Math.min(rh * 0.7, 6) : Math.max(rh, 0.75);
+    B.rh = rh;
+    for (let i = 0; i < nb; i++) {
+      const [b, d] = L[i], x0 = xOf(b), x1 = d === -Infinity ? xR : xOf(d);
+      const on = b >= u && d < u;
+      ctx.globalAlpha = on ? 1 : 0.34; ctx.fillStyle = C.h[B.k];
+      ctx.fillRect(x0, B.y + 2 + i * rh + (rh - bh) / 2, Math.max(x1 - x0, 1), bh);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // axis
+  ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(xL, bottom + 0.5); ctx.lineTo(xR, bottom + 0.5); ctx.stroke();
+  ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.font = '11px "IBM Plex Mono", monospace';
+  for (const t of ticks(F.lo, F.hi)) { const x = xOf(t); ctx.fillRect(x, bottom, 1, 4); ctx.fillText(fmt(t, Number.isInteger(t) ? 0 : 1), x, bottom + 15); }
+  ctx.textAlign = 'right'; ctx.font = 'italic 14px "STIX Two Text", serif'; ctx.fillText('u', xL - 10, bottom + 15);
+  // level line
+  ctx.fillStyle = C.acc; ctx.fillRect(Math.round(xu) - 1, 0, 2, bottom);
+  ctx.beginPath(); ctx.arc(xu, bottom, 5, 0, Math.PI * 2); ctx.fill();
+}
+
+function dg() { // diagram geometry
+  const s = Math.max(60, Math.min(PL.h - (isM() ? 44 : 56), PL.w - (isM() ? 64 : 80))), x0 = Math.max(isM() ? 44 : 56, (PL.w - s) / 2), y0 = isM() ? 8 : 12;
+  return { s, x0, y0, X: v => x0 + (v - F.lo) / (F.hi - F.lo) * s, Y: v => y0 + (F.hi - (v === -Infinity ? F.lo : v)) / (F.hi - F.lo) * s,
+    inv: (px, py) => [F.lo + (px - x0) / s * (F.hi - F.lo), F.hi - (py - y0) / s * (F.hi - F.lo)] };
+}
+function drawDiagram(ctx, C) {
+  const G = dg(), { s, x0, y0, X, Y } = G, u = S.u;
+  ctx.strokeStyle = C.line; ctx.strokeRect(x0 + 0.5, y0 + 0.5, s, s);
+  // quadrant: born at or above u, dies below u
+  ctx.fillStyle = C.acc; ctx.globalAlpha = 0.08; ctx.fillRect(X(u), Y(u), x0 + s - X(u), y0 + s - Y(u)); ctx.globalAlpha = 1;
+  ctx.strokeStyle = C.acc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(u), y0 + s); ctx.lineTo(X(u), Y(u)); ctx.lineTo(x0 + s, Y(u)); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.strokeStyle = C.muted; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(X(F.lo), Y(F.lo)); ctx.lineTo(X(F.hi), Y(F.hi)); ctx.stroke(); ctx.globalAlpha = 1;
+  for (const k of [...Array(F.N).keys()].filter(k => S.dims[k])) {
+    ctx.fillStyle = C.h[k];
+    for (const [b, d] of sorted[k]) { const on = b >= u && d < u; ctx.globalAlpha = on ? 0.95 : 0.3; ctx.beginPath(); ctx.arc(X(b), Y(d), d === -Infinity ? 3.5 : 2.4, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1; ctx.fillStyle = C.muted; ctx.font = '11px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+  for (const t of ticks(F.lo, F.hi)) ctx.fillText(fmt(t, Number.isInteger(t) ? 0 : 1), X(t), y0 + s + 14);
+  ctx.textAlign = 'right';
+  for (const t of ticks(F.lo, F.hi)) ctx.fillText(fmt(t, Number.isInteger(t) ? 0 : 1), x0 - 6, Y(t));
+  ctx.fillText('−∞', x0 - 6, y0 + s - 4);
+  ctx.font = '12px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('birth', x0 + s / 2, y0 + s + 28);
+  ctx.save(); ctx.translate(x0 - 40, y0 + s / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('death', 0, 0); ctx.restore();
+}
+
+// pointer interaction
+const plot = $('plot'), tip = $('tip');
+function local(e) { const r = plot.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+function levelFromPointer(x, y) {
+  if (S.view === 'barcode') return uOf(x);
+  const [b, d] = dg().inv(x, y); return (b + d) / 2;
+}
+function hit(x, y) {
+  if (S.view === 'barcode') {
+    for (const B of PL.bands) {
+      if (y < B.y || y > B.y + B.h || !B.rh) continue;
+      const L = sorted[B.k]; const i = Math.floor((y - B.y - 2) / B.rh);
+      for (const j of [i, i - 1, i + 1]) { const bar = L[j]; if (!bar) continue;
+        const x0 = xOf(bar[0]), x1 = bar[1] === -Infinity ? PL.w - PL.R : xOf(bar[1]);
+        if (x >= x0 - 2 && x <= x1 + 2 && Math.abs(B.y + 2 + (j + 0.5) * B.rh - y) <= Math.max(B.rh, 3)) return { k: B.k, bar, px: (x0 + x1) / 2, py: B.y + 2 + j * B.rh };
+      }
+    }
+    return null;
+  }
+  const G = dg(); let best = null, bd = 49;
+  for (const k of [...Array(F.N).keys()].filter(k => S.dims[k])) for (const bar of sorted[k]) {
+    const dx = G.X(bar[0]) - x, dy = G.Y(bar[1]) - y, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = { k, bar, px: G.X(bar[0]), py: G.Y(bar[1]) - 4 }; }
+  }
+  return best;
+}
+let tapStart = null, tipTimer = 0;
+plot.addEventListener('pointerdown', e => { if (!F) return; PL.drag = true; plot.setPointerCapture(e.pointerId); tip.hidden = true; const [x, y] = local(e); tapStart = { x, y, type: e.pointerType }; setLevel(levelFromPointer(x, y)); });
+function showTip(h) {
+  const [b, d] = h.bar, nm = NAMES[F.N][h.k].replace(/s$/, '');
+  tip.innerHTML = `H${h.k} ${nm} · born ${fmt(b)} · ${d === -Infinity ? 'never dies' : 'dies ' + fmt(d) + ' · length ' + (b - d).toFixed(2)}`;
+  tip.hidden = false;
+  const half = tip.offsetWidth / 2 + 4;
+  tip.style.left = clamp(h.px, half, Math.max(half, PL.w - half)) + 'px'; tip.style.top = (h.py + plot.offsetTop) + 'px';
+}
+plot.addEventListener('pointermove', e => {
+  if (!F) return; const [x, y] = local(e);
+  if (PL.drag) { setLevel(levelFromPointer(x, y)); return; }
+  if (e.pointerType !== 'mouse') return;
+  const h = hit(x, y);
+  if (!h) { tip.hidden = true; return; }
+  showTip(h);
+});
+const endDrag = e => {
+  PL.drag = false;
+  if (e && e.type === 'pointerup' && tapStart && tapStart.type !== 'mouse') {
+    const [x, y] = local(e);
+    if (Math.hypot(x - tapStart.x, y - tapStart.y) < 8) { const h = hit(tapStart.x, tapStart.y); if (h) { showTip(h); clearTimeout(tipTimer); tipTimer = setTimeout(() => { tip.hidden = true; }, 2600); } }
+  }
+  tapStart = null;
+};
+plot.addEventListener('pointerup', endDrag); plot.addEventListener('pointercancel', endDrag);
+plot.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') tip.hidden = true; });
+
+// ---------------- resize & theme ----------------
+let tRes = 0;
+const ro = new ResizeObserver(() => { clearTimeout(tRes); tRes = setTimeout(() => { if (!F) return; if (F.N === 2) { prep2D(); drawViewer(); } renderThumbs(); drawPlot(); }, 120); });
+ro.observe($('plotwrap')); ro.observe(document.querySelector('.viewer'));
+MQ.addEventListener('change', () => { if (!isM()) openSheet(false); });
+
+// ---------------- settings sheet (phones) ----------------
+const sheet = $('sheet'), scrim = $('scrim');
+function openSheet(on) {
+  sheet.classList.toggle('open', on); scrim.hidden = !on;
+  $('openSheet').setAttribute('aria-expanded', String(on));
+  if (on) { sheet.scrollTop = 0; $('sheetDone').focus({ preventScroll: true }); }
+  sheet.style.transform = '';
+}
+$('openSheet').addEventListener('click', () => openSheet(true));
+$('sheetDone').addEventListener('click', () => openSheet(false));
+scrim.addEventListener('click', () => openSheet(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open')) openSheet(false); });
+(function swipeToClose() {
+  const head = $('sheethead'); let y0 = null;
+  head.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; y0 = e.clientY; head.setPointerCapture(e.pointerId); sheet.style.transition = 'none'; });
+  head.addEventListener('pointermove', e => { if (y0 === null) return; sheet.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+  const up = e => { if (y0 === null) return; const dy = e.clientY - y0; y0 = null; sheet.style.transition = ''; if (dy > 70) openSheet(false); else sheet.style.transform = ''; };
+  head.addEventListener('pointerup', up); head.addEventListener('pointercancel', up);
+})();
+const retheme = () => { themeFrame(); if (F) { drawViewer(); renderThumbs(); drawPlot(); } };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// colour bar
+(function () {
+  const g = STOPS.map(([v, c]) => `rgb(${c.join(',')}) ${((v + 3.2) / 6.4 * 100).toFixed(1)}%`).join(', ');
+  for (const el of document.querySelectorAll('.cbar')) el.style.background = `linear-gradient(90deg, ${g})`;
+  const gv = STOPS.map(([v, c]) => `rgb(${c.join(',')}) ${((v + 3.2) / 6.4 * 100).toFixed(1)}%`).join(', ');
+  for (const el of document.querySelectorAll('.vbar')) el.style.background = `linear-gradient(0deg, ${gv})`;
+  for (const el of document.querySelectorAll('.vticks')) el.innerHTML = [-3, -2, -1, 0, 1, 2, 3].map(t => `<span style="bottom:${((t + 3.2) / 6.4 * 100).toFixed(1)}%">${fmt(t, 0)}</span>`).join('');
+  for (const el of document.querySelectorAll('.cbarTicks')) el.innerHTML = [-3, -2, -1, 0, 1, 2, 3].map(t => `<span style="left:${((t + 3.2) / 6.4 * 100).toFixed(1)}%">${fmt(t, 0)}</span>`).join('');
+})();
+
+// ---------------- boot ----------------
+if (isM()) S.res[3] = 32;
+initControls(); switchView();
+$('busy').textContent = 'Loading 3D viewer…';
+loadThree().then(() => { if (THREE) init3D(); compute(); });
+
+</script>
+
+</body></html>
